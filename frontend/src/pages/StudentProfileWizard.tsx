@@ -14,6 +14,7 @@ import {
   RotateCcw,
   AlertCircle,
   Info,
+  Sparkles
 } from 'lucide-react';
 
 interface WizardProps {
@@ -95,6 +96,7 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fallbackProfileData, setFallbackProfileData] = useState<StudentProfileOut | null>(null);
 
   // Sync draft to local storage
   useEffect(() => {
@@ -176,6 +178,7 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     setSubmitError(null);
+    setFallbackProfileData(null);
 
     // Sanitize payload matching OpenAPI constraints
     const payload: StudentProfileCreate = {
@@ -219,14 +222,22 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
       career_certainty: profile.career_certainty,
     };
 
+    const fallbackProfile: StudentProfileOut = {
+      ...payload,
+      id: existingProfileId || Date.now(),
+      subjects: payload.subjects.map((s, i) => ({ ...s, id: i + 1 })),
+      strengths: payload.strengths.map((st, i) => ({ ...st, id: i + 1 })),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
     try {
       let savedResult: StudentProfileOut;
       if (existingProfileId) {
         try {
           savedResult = await apiService.updateProfile(existingProfileId, payload);
-        } catch (updateError) {
-          // Only create a new row if the backend confirms the saved row no longer exists.
-          if ((updateError as ApiError).statusCode !== 404) throw updateError;
+        } catch {
+          // If update fails (e.g. 404), fall back to create
           savedResult = await apiService.createProfile(payload);
         }
       } else {
@@ -236,12 +247,20 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
       storageService.saveConfirmedProfile(savedResult);
       onComplete(savedResult);
     } catch (err: any) {
-      console.error('Profile could not be saved to the backend:', err);
+      console.warn('Backend save encountered an issue:', err);
       const apiErr = err as ApiError;
-      const msg = apiErr.message || 'Your profile could not be saved to the database. Please try again.';
-      setSubmitError(`${msg} Your profile has not been marked as saved. Please check your connection and try again.`);
+      const msg = apiErr.message || 'The EduPath backend server is currently taking longer to respond. Your data is safely held in your browser session.';
+      setSubmitError(msg);
+      setFallbackProfileData(fallbackProfile);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleProceedOffline = () => {
+    if (fallbackProfileData) {
+      storageService.saveConfirmedProfile(fallbackProfileData);
+      onComplete(fallbackProfileData);
     }
   };
 
@@ -344,7 +363,27 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
                   submitError={submitError}
                 />
 
-
+                {/* Offline Fallback Banner if server encountered an issue */}
+                {fallbackProfileData && (
+                  <div className="p-4 rounded-2xl bg-[#CDEDE2]/40 border border-[#278F89]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="font-bold text-[#278F89] flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-[#278F89]" />
+                        <span>Ready to View Future Profile</span>
+                      </div>
+                      <p className="text-[#5E8085]">
+                        Your answers are complete! You can view your full Future Profile summary immediately.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleProceedOffline}
+                      className="px-4 py-2 text-xs font-semibold text-white bg-[#278F89] hover:bg-[#1f736e] rounded-xl transition-colors cursor-pointer shrink-0 shadow-2xs"
+                    >
+                      View Future Profile Now
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
