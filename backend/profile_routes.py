@@ -9,8 +9,11 @@ router = APIRouter(prefix="/profiles", tags=["Student Profiles"])
 
 def load_profile(db: Session, profile_id: int):
     stmt = select(StudentProfile).where(StudentProfile.id == profile_id).options(
-        selectinload(StudentProfile.subjects), selectinload(StudentProfile.interests),
-        selectinload(StudentProfile.strengths), selectinload(StudentProfile.priorities))
+                selectinload(StudentProfile.subjects), 
+                selectinload(StudentProfile.interests),
+                selectinload(StudentProfile.strengths),
+                selectinload(StudentProfile.priorities)
+                )
     return db.scalar(stmt)
 
 def build_profile(payload: StudentProfileCreate):
