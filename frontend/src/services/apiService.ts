@@ -1,6 +1,7 @@
 /**
  * EduPath API Service
  * Manages communication with FastAPI backend.
+ * Integrates Supabase JWT authentication token for server-side verification.
  */
 
 import { StudentProfileCreate, StudentProfileOut } from '../types/studentProfile';
@@ -9,6 +10,38 @@ import { StudentProfileCreate, StudentProfileOut } from '../types/studentProfile
 export const API_BASE = (
   import.meta.env.VITE_API_BASE || 'https://edupath-ai-backend-9van.onrender.com'
 ).replace(/\/$/, '');
+
+let currentAuthToken: string | null = null;
+
+/**
+ * Set the Supabase access token for authenticated backend API requests
+ */
+export function setApiAuthToken(token: string | null): void {
+  currentAuthToken = token;
+}
+
+/**
+ * Get the current Supabase access token
+ */
+export function getApiAuthToken(): string | null {
+  return currentAuthToken;
+}
+
+/**
+ * Generate standard request headers including JWT bearer authorization
+ */
+function getRequestHeaders(additionalHeaders: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...additionalHeaders,
+  };
+
+  if (currentAuthToken) {
+    headers['Authorization'] = `Bearer ${currentAuthToken}`;
+  }
+
+  return headers;
+}
 
 export interface HealthResponse {
   status: string;
@@ -49,7 +82,7 @@ export const apiService = {
   async checkHealth(): Promise<HealthResponse> {
     const res = await fetch(`${API_BASE}/health`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: getRequestHeaders(),
     });
     if (!res.ok) {
       throw await parseErrorResponse(res);
@@ -64,10 +97,9 @@ export const apiService = {
   async createProfile(profile: StudentProfileCreate): Promise<StudentProfileOut> {
     const res = await fetch(`${API_BASE}/api/profiles`, {
       method: 'POST',
-      headers: {
+      headers: getRequestHeaders({
         'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      }),
       body: JSON.stringify(profile),
     });
 
@@ -84,7 +116,7 @@ export const apiService = {
   async getProfile(profileId: number): Promise<StudentProfileOut> {
     const res = await fetch(`${API_BASE}/api/profiles/${profileId}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: getRequestHeaders(),
     });
 
     if (!res.ok) {
@@ -100,10 +132,9 @@ export const apiService = {
   async updateProfile(profileId: number, profile: StudentProfileCreate): Promise<StudentProfileOut> {
     const res = await fetch(`${API_BASE}/api/profiles/${profileId}`, {
       method: 'PUT',
-      headers: {
+      headers: getRequestHeaders({
         'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      }),
       body: JSON.stringify(profile),
     });
 
@@ -120,6 +151,7 @@ export const apiService = {
   async deleteProfile(profileId: number): Promise<void> {
     const res = await fetch(`${API_BASE}/api/profiles/${profileId}`, {
       method: 'DELETE',
+      headers: getRequestHeaders(),
     });
 
     if (!res.ok && res.status !== 204) {
@@ -133,7 +165,7 @@ export const apiService = {
   async listProfiles(skip = 0, limit = 10): Promise<StudentProfileOut[]> {
     const res = await fetch(`${API_BASE}/api/profiles?skip=${skip}&limit=${limit}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: getRequestHeaders(),
     });
 
     if (!res.ok) {
@@ -145,15 +177,13 @@ export const apiService = {
 
   /**
    * AI Pathway Recommendations Stub (POST /api/pathways)
-   * Ready for future activation once the FastAPI backend implements this route.
    */
   async getPathways(profileId: number): Promise<any> {
     const res = await fetch(`${API_BASE}/api/pathways`, {
       method: 'POST',
-      headers: {
+      headers: getRequestHeaders({
         'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      }),
       body: JSON.stringify({ profile_id: profileId }),
     });
 
@@ -166,15 +196,13 @@ export const apiService = {
 
   /**
    * What-If Scenario Simulations Stub (POST /api/scenarios)
-   * Ready for future activation once the FastAPI backend implements this route.
    */
   async simulateScenario(payload: any): Promise<any> {
     const res = await fetch(`${API_BASE}/api/scenarios`, {
       method: 'POST',
-      headers: {
+      headers: getRequestHeaders({
         'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      }),
       body: JSON.stringify(payload),
     });
 

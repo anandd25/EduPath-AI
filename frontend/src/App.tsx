@@ -1,14 +1,17 @@
 /**
  * EduPath — Your Future, Taking Shape
  * Class 10 Educational Discovery Platform
+ * Powered by Supabase Authentication & FastAPI Backend Integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { StudentProfileCreate, StudentProfileOut } from './types/studentProfile';
 import { storageService } from './services/storageService';
-import { authService, User } from './services/authService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -17,19 +20,8 @@ import { FutureProfilePage } from './pages/FutureProfilePage';
 
 type AppRoute = '/' | '/login' | '/register' | '/wizard' | '/profile';
 
-export default function App() {
-  const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
-    const hash = window.location.hash.replace(/^#/, '');
-    if (hash === '/login' || hash === 'login') return '/login';
-    if (hash === '/register' || hash === 'register') return '/register';
-    if (hash === '/wizard' || hash === 'wizard') return '/wizard';
-    if (hash === '/profile' || hash === 'profile') return '/profile';
-    return '/';
-  });
-
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    return authService.getCurrentUser();
-  });
+function EduPathApp() {
+  const { user, loading, isAuthenticated, signOut } = useAuth();
 
   const [draftProfile, setDraftProfile] = useState<StudentProfileCreate>(() => {
     return storageService.getDraftProfile();
@@ -39,28 +31,34 @@ export default function App() {
     return storageService.getConfirmedProfile();
   });
 
-  // Sync route changes to window hash for back button support
-  useEffect(() => {
-    window.location.hash = currentRoute;
-  }, [currentRoute]);
+  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
-  // Listen to hash changes (e.g. browser back/forward buttons)
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace(/^#/, '');
-      if (hash === '/login' || hash === 'login') setCurrentRoute('/login');
-      else if (hash === '/register' || hash === 'register') setCurrentRoute('/register');
-      else if (hash === '/wizard' || hash === 'wizard') setCurrentRoute('/wizard');
-      else if (hash === '/profile' || hash === 'profile') setCurrentRoute('/profile');
-      else setCurrentRoute('/');
-    };
+  // Sync route from URL hash
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
+    const rawHash = window.location.hash.replace(/^#/, '');
+    if (rawHash === '/login' || rawHash === 'login') return '/login';
+    if (rawHash === '/register' || rawHash === 'register') return '/register';
+    if (rawHash === '/wizard' || rawHash === 'wizard') return '/wizard';
+    if (rawHash === '/profile' || rawHash === 'profile') return '/profile';
+    return '/';
+  });
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  const handleNavigate = (route: string) => {
+  const handleNavigate = useCallback((route: string, notice?: string) => {
     const normalized = route.startsWith('/') ? route : `/${route}`;
+    if (notice) {
+      setRedirectNotice(notice);
+    } else {
+      setRedirectNotice(null);
+    }
+
+    // Check protected routes
+    if ((normalized === '/wizard' || normalized === '/profile') && !isAuthenticated && !loading) {
+      setRedirectNotice('Sign in or create an account to begin your journey.');
+      setCurrentRoute('/login');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (
       normalized === '/' ||
       normalized === '/login' ||
@@ -73,32 +71,70 @@ export default function App() {
       setCurrentRoute('/');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [isAuthenticated, loading]);
+
+  // Sync route changes to window hash
+  useEffect(() => {
+    window.location.hash = currentRoute;
+  }, [currentRoute]);
+
+  // Listen to browser hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash === '/wizard' || hash === 'wizard' || hash === '/profile' || hash === 'profile') {
+        if (!isAuthenticated && !loading) {
+          handleNavigate('/login', 'Sign in or create an account to begin your journey.');
+          return;
+        }
+        setCurrentRoute(hash.startsWith('/') ? (hash as AppRoute) : (`/${hash}` as AppRoute));
+      } else if (hash === '/login' || hash === 'login') {
+        setCurrentRoute('/login');
+      } else if (hash === '/register' || hash === 'register') {
+        setCurrentRoute('/register');
+      } else {
+        setCurrentRoute('/');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [isAuthenticated, loading, handleNavigate]);
+
+  // Update preferred name in draft profile when user logs in
+  useEffect(() => {
+    if (user?.user_metadata?.preferred_name && !draftProfile.preferred_name) {
+      setDraftProfile((prev) => ({
+        ...prev,
+        preferred_name: user.user_metadata.preferred_name || null,
+      }));
+    }
+  }, [user, draftProfile.preferred_name]);
+
+  const handleLoginSuccess = (hasExistingProfile: boolean) => {
+    setRedirectNotice(null);
+    if (hasExistingProfile || confirmedProfile) {
+      handleNavigate('/profile');
+    } else {
+      handleNavigate('/wizard');
+    }
   };
 
-  const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
-    if (user.preferred_name && !draftProfile.preferred_name) {
-      setDraftProfile((prev) => ({ ...prev, preferred_name: user.preferred_name || null }));
+  const handleRegisterSuccess = (needsEmailConfirmation: boolean) => {
+    setRedirectNotice(null);
+    if (!needsEmailConfirmation) {
+      handleNavigate('/wizard');
     }
-    handleNavigate('/wizard');
-  };
-
-  const handleRegisterSuccess = (user: User) => {
-    setCurrentUser(user);
-    if (user.preferred_name) {
-      setDraftProfile((prev) => ({ ...prev, preferred_name: user.preferred_name || null }));
-    }
-    handleNavigate('/wizard');
   };
 
   const handleLogout = async () => {
-    await authService.logout();
-    setCurrentUser(null);
+    await signOut();
+    setRedirectNotice(null);
+    handleNavigate('/');
   };
 
   const handleWizardComplete = (finalizedProfile: StudentProfileOut) => {
     setConfirmedProfile(finalizedProfile);
-    // Sync the draft state
     setDraftProfile({
       education_stage: 'class10',
       preferred_name: finalizedProfile.preferred_name,
@@ -122,6 +158,18 @@ export default function App() {
     handleNavigate('/profile');
   };
 
+  const handleStartJourney = () => {
+    if (!isAuthenticated) {
+      handleNavigate('/login', 'Sign in or create an account to begin your journey.');
+      return;
+    }
+    if (confirmedProfile) {
+      handleNavigate('/profile');
+    } else {
+      handleNavigate('/wizard');
+    }
+  };
+
   const handleScrollToSection = (sectionId: string) => {
     if (currentRoute !== '/') {
       handleNavigate('/');
@@ -139,12 +187,28 @@ export default function App() {
     }
   };
 
+  // Initial loading state while Supabase checks stored session
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FAF9] text-[#376E7D]">
+        <div className="w-12 h-12 rounded-2xl bg-[#C9E6F8] text-[#367BA8] flex items-center justify-center shadow-2xs mb-3">
+          <Loader2 className="w-6 h-6 animate-spin text-[#367BA8]" />
+        </div>
+        <h2 className="font-serif-heading text-lg font-bold text-[#376E7D]">
+          EduPath
+        </h2>
+        <p className="text-xs text-[#5E8085] mt-1">
+          Loading student session...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F5FAF9] text-[#376E7D] selection:bg-[#C9E6F8] selection:text-[#376E7D]">
       {/* Global Header */}
       <Header
         currentRoute={currentRoute}
-        currentUser={currentUser}
         onNavigate={handleNavigate}
         onScrollToSection={handleScrollToSection}
         onLogout={handleLogout}
@@ -154,9 +218,10 @@ export default function App() {
       <main className="flex-1">
         {currentRoute === '/' && (
           <LandingPage
-            onStartJourney={() => handleNavigate('/wizard')}
+            onStartJourney={handleStartJourney}
             onNavigate={handleNavigate}
-            isAuthenticated={Boolean(currentUser)}
+            isAuthenticated={isAuthenticated}
+            hasCompletedProfile={Boolean(confirmedProfile)}
           />
         )}
 
@@ -164,7 +229,7 @@ export default function App() {
           <LoginPage
             onNavigate={handleNavigate}
             onLoginSuccess={handleLoginSuccess}
-            onContinueAsGuest={() => handleNavigate('/wizard')}
+            redirectNotice={redirectNotice}
           />
         )}
 
@@ -172,43 +237,47 @@ export default function App() {
           <RegisterPage
             onNavigate={handleNavigate}
             onRegisterSuccess={handleRegisterSuccess}
-            onContinueAsGuest={() => handleNavigate('/wizard')}
           />
         )}
 
+        {/* Protected Route: Student Profile Wizard */}
         {currentRoute === '/wizard' && (
-          <StudentProfileWizard
-            initialProfile={draftProfile}
-            onComplete={handleWizardComplete}
-            onExit={() => handleNavigate('/')}
-            existingProfileId={confirmedProfile?.id || null}
-          />
+          <ProtectedRoute onRedirectToLogin={(notice) => handleNavigate('/login', notice)}>
+            <StudentProfileWizard
+              initialProfile={draftProfile}
+              onComplete={handleWizardComplete}
+              onExit={() => handleNavigate('/')}
+              existingProfileId={confirmedProfile?.id || null}
+            />
+          </ProtectedRoute>
         )}
 
-        {currentRoute === '/profile' && confirmedProfile && (
-          <FutureProfilePage
-            profile={confirmedProfile}
-            onEdit={() => handleNavigate('/wizard')}
-            onBackToHome={() => handleNavigate('/')}
-          />
-        )}
-
-        {/* If user navigates directly to /profile without having filled a profile yet */}
-        {currentRoute === '/profile' && !confirmedProfile && (
-          <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
-            <h2 className="font-serif-heading text-2xl font-bold text-[#376E7D]">
-              No Future Profile Generated Yet
-            </h2>
-            <p className="text-sm text-[#5E8085] max-w-md">
-              Complete the 5-step Class 10 profile wizard to generate and view your personalized Future Profile summary.
-            </p>
-            <button
-              onClick={() => handleNavigate('/wizard')}
-              className="px-6 py-3 text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] rounded-xl shadow-xs transition-colors cursor-pointer"
-            >
-              Start Class 10 Profile Wizard
-            </button>
-          </div>
+        {/* Protected Route: Future Profile Summary */}
+        {currentRoute === '/profile' && (
+          <ProtectedRoute onRedirectToLogin={(notice) => handleNavigate('/login', notice)}>
+            {confirmedProfile ? (
+              <FutureProfilePage
+                profile={confirmedProfile}
+                onEdit={() => handleNavigate('/wizard')}
+                onBackToHome={() => handleNavigate('/')}
+              />
+            ) : (
+              <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
+                <h2 className="font-serif-heading text-2xl font-bold text-[#376E7D]">
+                  No Future Profile Generated Yet
+                </h2>
+                <p className="text-sm text-[#5E8085] max-w-md">
+                  Complete the 5-step Class 10 profile wizard to generate and view your personalized Future Profile summary.
+                </p>
+                <button
+                  onClick={() => handleNavigate('/wizard')}
+                  className="px-6 py-3 text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  Start Class 10 Profile Wizard
+                </button>
+              </div>
+            )}
+          </ProtectedRoute>
         )}
       </main>
 
@@ -217,5 +286,13 @@ export default function App() {
         <Footer onNavigate={handleNavigate} />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <EduPathApp />
+    </AuthProvider>
   );
 }

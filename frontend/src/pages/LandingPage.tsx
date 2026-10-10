@@ -10,7 +10,8 @@ import {
   DollarSign,
   Compass,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Lock
 } from 'lucide-react';
 import { PathwayDiagram } from '../components/PathwayDiagram';
 
@@ -18,12 +19,14 @@ interface LandingPageProps {
   onStartJourney: () => void;
   onNavigate: (route: string) => void;
   isAuthenticated: boolean;
+  hasCompletedProfile?: boolean;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ 
   onStartJourney, 
   onNavigate,
-  isAuthenticated 
+  isAuthenticated,
+  hasCompletedProfile = false,
 }) => {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -55,22 +58,66 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Explore your interests, understand your strengths and discover the possibilities beyond Class 10.
               </p>
 
-              {/* Action Buttons */}
-              <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <button
-                  onClick={onStartJourney}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer group"
-                >
-                  <span>Start My Journey</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </button>
+              {/* Action Buttons & Authentication Requirement */}
+              <div className="pt-1 flex flex-col items-stretch sm:items-start gap-2.5">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={onStartJourney}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer group"
+                    >
+                      <span>
+                        {hasCompletedProfile ? 'View My Future Profile' : 'Start My Journey'}
+                      </span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      aria-disabled="true"
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-[#5E8085] bg-[#DCEBEA]/90 border border-[#DCEBEA] rounded-xl shadow-none cursor-not-allowed select-none opacity-85"
+                      title="Sign in or create an account to begin your journey"
+                    >
+                      <span>Start My Journey</span>
+                      <ArrowRight className="w-4 h-4 text-[#5E8085]/70" />
+                    </button>
+                  )}
 
-                <button
-                  onClick={() => scrollToSection('how-it-works')}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold text-[#367BA8] bg-white hover:bg-[#C9E6F8]/30 border border-[#DCEBEA] rounded-xl transition-all cursor-pointer shadow-2xs"
-                >
-                  <span>See How It Works</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('how-it-works')}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold text-[#367BA8] bg-white hover:bg-[#C9E6F8]/30 border border-[#DCEBEA] rounded-xl transition-all cursor-pointer shadow-2xs"
+                  >
+                    <span>See How It Works</span>
+                  </button>
+                </div>
+
+                {/* Helper message shown when NOT authenticated */}
+                {!isAuthenticated && (
+                  <div className="flex items-center gap-2 text-xs text-[#5E8085] bg-[#EAF4FF] px-3.5 py-2 rounded-xl border border-[#D8EAFE] max-w-md animate-in fade-in">
+                    <Lock className="w-3.5 h-3.5 text-[#367BA8] shrink-0" />
+                    <span>
+                      Sign in or create an account to begin your journey.{' '}
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('/login')}
+                        className="font-bold text-[#367BA8] hover:underline cursor-pointer inline"
+                      >
+                        Sign In
+                      </button>
+                      {' · '}
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('/register')}
+                        className="font-bold text-[#367BA8] hover:underline cursor-pointer inline"
+                      >
+                        Register
+                      </button>
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Three Small Icon-and-Text Highlights */}
@@ -141,36 +188,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <Layers className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-[#376E7D]">
-                2. Explore Possibilities
+                2. See Beyond Stream Labels
               </h3>
               <p className="text-xs text-[#5E8085] leading-relaxed">
-                Learn about different education routes after Class 10.
+                Look past Science, Commerce and Arts into real career paths and possibilities.
               </p>
             </div>
 
             {/* Card 3 */}
-            <div className="p-6 rounded-2xl bg-[#CDEDE2]/40 border border-[#CDEDE2] hover:border-[#278F89] transition-all space-y-3 shadow-2xs">
+            <div className="p-6 rounded-2xl bg-[#F5FAF9] border border-[#DCEBEA] hover:border-[#367BA8] transition-all space-y-3 shadow-2xs">
               <div className="w-10 h-10 rounded-xl bg-[#CDEDE2] text-[#278F89] flex items-center justify-center">
                 <DollarSign className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-[#376E7D]">
-                3. Plan Within Your Budget
+                3. Practical Considerations
               </h3>
               <p className="text-xs text-[#5E8085] leading-relaxed">
-                Consider affordability and financial options.
+                Think about budget, scholarships and location preferences early.
               </p>
             </div>
 
             {/* Card 4 */}
-            <div className="p-6 rounded-2xl bg-white border border-[#DCEBEA] hover:border-[#278F89] transition-all space-y-3 shadow-2xs">
-              <div className="w-10 h-10 rounded-xl bg-[#CDEDE2] text-[#278F89] flex items-center justify-center">
-                <Route className="w-5 h-5" />
+            <div className="p-6 rounded-2xl bg-white border border-[#DCEBEA] hover:border-[#367BA8] transition-all space-y-3 shadow-2xs">
+              <div className="w-10 h-10 rounded-xl bg-[#C9E6F8] text-[#367BA8] flex items-center justify-center">
+                <Compass className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-[#376E7D]">
-                4. Discover Alternative Paths
+                4. Your Personal Roadmap
               </h3>
               <p className="text-xs text-[#5E8085] leading-relaxed">
-                See that there are many ways to reach your goals.
+                Get a structured view of where you are and where you could go.
               </p>
             </div>
           </div>
@@ -182,90 +229,82 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14 space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-[#367BA8]">
-              THREE SIMPLE STEPS
+              HOW IT WORKS
             </span>
             <h2 className="font-serif-heading text-3xl sm:text-4xl font-bold text-[#376E7D] tracking-tight">
-              Three Simple Steps
+              Three Simple Steps to Clarity.
             </h2>
             <p className="text-sm text-[#5E8085]">
-              A thoughtful, step-by-step approach to mapping out your educational path after Class 10.
+              Designed specifically for Class 10 students and their parents.
             </p>
           </div>
 
-          {/* Timeline */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Step 1 */}
-            <div className="bg-white rounded-2xl p-6 border border-[#DCEBEA] space-y-3 shadow-2xs flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-[#367BA8] text-white font-bold text-xs flex items-center justify-center">
-                  1
-                </div>
-                <h3 className="text-base font-bold text-[#376E7D]">
-                  Tell us about yourself
-                </h3>
-                <p className="text-xs text-[#5E8085] leading-relaxed">
-                  Share your academic details, interests and preferences.
-                </p>
+            <div className="bg-white rounded-3xl p-8 border border-[#DCEBEA] space-y-4 shadow-2xs relative overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-[#C9E6F8] text-[#367BA8] text-xs font-bold flex items-center justify-center">
+                1
               </div>
-              <div className="pt-2 text-[11px] text-[#367BA8] font-medium border-t border-[#DCEBEA]">
-                Step 1 & 2 · Academic context
+              <h3 className="font-serif-heading text-xl font-bold text-[#376E7D]">
+                Tell Us About Yourself
+              </h3>
+              <p className="text-xs text-[#5E8085] leading-relaxed">
+                Share your current subjects, the ones you enjoy most, your hobbies, and what you naturally find interesting. No pressure, no tests.
+              </p>
+              <div className="pt-2 text-[11px] font-medium text-[#367BA8] flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#278F89]" />
+                <span>Takes ~5 minutes</span>
               </div>
             </div>
 
             {/* Step 2 */}
-            <div className="bg-white rounded-2xl p-6 border border-[#DCEBEA] space-y-3 shadow-2xs flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-[#367BA8] text-white font-bold text-xs flex items-center justify-center">
-                  2
-                </div>
-                <h3 className="text-base font-bold text-[#376E7D]">
-                  Explore your options
-                </h3>
-                <p className="text-xs text-[#5E8085] leading-relaxed">
-                  Understand the different educational directions.
-                </p>
+            <div className="bg-white rounded-3xl p-8 border border-[#DCEBEA] space-y-4 shadow-2xs relative overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-[#CDEDE2] text-[#278F89] text-xs font-bold flex items-center justify-center">
+                2
               </div>
-              <div className="pt-2 text-[11px] text-[#367BA8] font-medium border-t border-[#DCEBEA]">
-                Step 3 & 4 · Interests & budget
+              <h3 className="font-serif-heading text-xl font-bold text-[#376E7D]">
+                Review Your Profile
+              </h3>
+              <p className="text-xs text-[#5E8085] leading-relaxed">
+                Check your answers, see how your interests connect, and make sure everything feels accurate before moving forward.
+              </p>
+              <div className="pt-2 text-[11px] font-medium text-[#278F89] flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#278F89]" />
+                <span>Always editable</span>
               </div>
             </div>
 
             {/* Step 3 */}
-            <div className="bg-white rounded-2xl p-6 border border-[#DCEBEA] space-y-3 shadow-2xs flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-[#278F89] text-white font-bold text-xs flex items-center justify-center">
-                  3
-                </div>
-                <h3 className="text-base font-bold text-[#376E7D]">
-                  Review your Future Profile
-                </h3>
-                <p className="text-xs text-[#5E8085] leading-relaxed">
-                  See a summary of your strengths, interests and goals.
-                </p>
+            <div className="bg-white rounded-3xl p-8 border border-[#DCEBEA] space-y-4 shadow-2xs relative overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-[#A7D9E6]/60 text-[#376E7D] text-xs font-bold flex items-center justify-center">
+                3
               </div>
-              <div className="pt-2 text-[11px] text-[#278F89] font-medium border-t border-[#DCEBEA]">
-                Step 5 · Profile summary review
+              <h3 className="font-serif-heading text-xl font-bold text-[#376E7D]">
+                Explore Your Future Profile
+              </h3>
+              <p className="text-xs text-[#5E8085] leading-relaxed">
+                See a clear summary of your educational profile, ready for future pathway recommendations and informed conversations.
+              </p>
+              <div className="pt-2 text-[11px] font-medium text-[#376E7D] flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#278F89]" />
+                <span>Your personal summary</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. About EduPath Section (Philosophy & Values) */}
+      {/* 4. About EduPath Section */}
       <section id="about" className="py-16 lg:py-24 bg-white border-b border-[#DCEBEA] scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-6 space-y-5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#CDEDE2] text-[#278F89] text-xs font-bold tracking-wide uppercase">
-                <Compass className="w-3.5 h-3.5" />
-                <span>ABOUT EDUPATH</span>
-              </div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#367BA8]">
+                ABOUT EDUPATH
+              </span>
               <h2 className="font-serif-heading text-3xl sm:text-4xl font-bold text-[#376E7D] tracking-tight">
-                Designed to Give Students Calm, Not Pressure.
+                Our Philosophy: Your Future is Bigger Than Any Single Exam.
               </h2>
-              <p className="text-sm text-[#5E8085] leading-relaxed">
-                Class 10 is one of the first times young learners are asked to make big decisions about streams and careers. Often, this is accompanied by intense societal anxiety and conflicting advice.
-              </p>
               <p className="text-sm text-[#5E8085] leading-relaxed">
                 EduPath was founded on a simple insight: you don&apos;t have to lock yourself into a single permanent label today. Instead, by reflecting honestly on what you enjoy, your academic comfort levels, and your family&apos;s real budget preferences, you can see the rich spectrum of educational possibilities ahead.
               </p>
@@ -318,36 +357,63 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 5. Final Call to Action */}
-      <section className="py-16 lg:py-24 bg-[#C9E6F8]/40 border-b border-[#DCEBEA] text-center relative overflow-hidden">
+      <section className="py-16 lg:py-24 bg-[#C9E6F8]/30 border-b border-[#DCEBEA] text-center relative overflow-hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
           <h2 className="font-serif-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-[#376E7D] tracking-tight">
             Take the First Step Towards Your Future.
           </h2>
 
           <p className="text-base text-[#5E8085] max-w-xl mx-auto">
-            You don&apos;t need to have everything figured out yet.
+            You don&apos;t need to have everything figured out yet. Start with what you know about yourself.
           </p>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={onStartJourney}
-              className="inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <span>Start My Journey</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <div className="pt-2 flex flex-col items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={onStartJourney}
+                  className="inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <span>
+                    {hasCompletedProfile ? 'View My Future Profile' : 'Start My Journey'}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold text-[#5E8085] bg-[#DCEBEA]/90 border border-[#DCEBEA] rounded-xl shadow-none cursor-not-allowed select-none opacity-85"
+                  title="Sign in or create an account to begin your journey"
+                >
+                  <span>Start My Journey</span>
+                  <ArrowRight className="w-4 h-4 text-[#5E8085]/70" />
+                </button>
+              )}
+
+              {!isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('/register')}
+                  className="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-[#367BA8] bg-white hover:bg-[#F5FAF9] border border-[#DCEBEA] rounded-xl transition-all cursor-pointer shadow-2xs"
+                >
+                  <span>Create an Account</span>
+                </button>
+              )}
+            </div>
+
             {!isAuthenticated && (
-              <button
-                onClick={() => onNavigate('/register')}
-                className="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-[#367BA8] bg-white hover:bg-[#F5FAF9] border border-[#DCEBEA] rounded-xl transition-all cursor-pointer shadow-2xs"
-              >
-                <span>Create an Account</span>
-              </button>
+              <div className="flex items-center gap-2 text-xs text-[#5E8085] bg-white/80 px-3.5 py-1.5 rounded-lg border border-[#DCEBEA]">
+                <Lock className="w-3.5 h-3.5 text-[#367BA8]" />
+                <span>Sign in or create an account to begin your journey.</span>
+              </div>
             )}
           </div>
 
           <div className="text-[11px] text-[#5E8085] pt-1">
-            Free discovery for Class 10 students &middot; Takes ~5 minutes &middot; Saved to your session
+            Free discovery for Class 10 students &middot; Takes ~5 minutes &middot; Saved securely to your account
           </div>
         </div>
       </section>
