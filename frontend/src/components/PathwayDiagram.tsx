@@ -9,10 +9,6 @@ import {
 } from '../lib/research';
 
 
-const [researchResults, setResearchResults] = useState<ResearchResult[]>([]);
-const [researchLoading, setResearchLoading] = useState(false);
-const [researchError, setResearchError] = useState('');
-
 
 type PathwayOption = {
   id: string;
@@ -97,6 +93,10 @@ type GraphNode = { id: string; title: string; parentId: string | null; depth: nu
 
 export const PathwayDiagram: React.FC = () => {
   const [nodes, setNodes] = useState<GraphNode[]>([{ id: 'class10', title: 'Class 10', parentId: null, depth: 0 }]);
+  const [researchResults, setResearchResults] = useState<ResearchResult[]>([]);
+const [researchLoading, setResearchLoading] = useState(false);
+const [researchError, setResearchError] = useState('');
+
   const [selectedId, setSelectedId] = useState('class10');
   const [expandedIds, setExpandedIds] = useState<string[]>(['class10']);
   const [notice, setNotice] = useState('');
