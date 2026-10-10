@@ -127,12 +127,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F5FAF9] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-edupath-pattern">
+    <div className="min-h-screen bg-[#F4FAFF] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-edupath-pattern">
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4">
         {/* Back Link */}
         <button
           onClick={() => onNavigate('/')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5E8085] hover:text-[#376E7D] transition-colors mb-6 cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#587482] hover:text-[#174F6B] transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Return to EduPath Home</span>
@@ -140,20 +140,20 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
 
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#CDEDE2] text-[#278F89] shadow-2xs mb-1">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#DDF2EF] text-[#438F85] shadow-2xs mb-1">
             <GraduationCap className="w-6 h-6" />
           </div>
-          <h1 className="font-serif-heading text-3xl font-bold text-[#376E7D] tracking-tight">
+          <h1 className="font-serif-heading text-3xl font-bold text-[#174F6B] tracking-tight">
             Create Your EduPath Account
           </h1>
-          <p className="text-sm text-[#5E8085] max-w-sm mx-auto">
+          <p className="text-sm text-[#587482] max-w-sm mx-auto">
             Start with what you know about yourself. Your journey begins with your personal account.
           </p>
         </div>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xs rounded-3xl border border-[#DCEBEA] space-y-6">
+        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xs rounded-3xl border border-[#DCEAF2] space-y-6">
           {/* Supabase configuration notice if credentials are not configured yet */}
           {!isConfigured && (
             <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
@@ -170,19 +170,19 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           {/* Email Confirmation Screen */}
           {emailConfirmationRequired ? (
             <div className="text-center space-y-5 py-4 animate-in fade-in">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-[#CDEDE2] text-[#278F89] flex items-center justify-center shadow-xs">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-[#DDF2EF] text-[#438F85] flex items-center justify-center shadow-xs">
                 <MailCheck className="w-7 h-7" />
               </div>
 
               <div className="space-y-2">
-                <h2 className="font-serif-heading text-2xl font-bold text-[#376E7D]">
+                <h2 className="font-serif-heading text-2xl font-bold text-[#174F6B]">
                   Verify Your Email Address
                 </h2>
-                <p className="text-xs text-[#5E8085] leading-relaxed">
+                <p className="text-xs text-[#587482] leading-relaxed">
                   We have sent a verification email to{' '}
-                  <strong className="text-[#376E7D] font-mono">{email}</strong>.
+                  <strong className="text-[#174F6B] font-mono">{email}</strong>.
                 </p>
-                <p className="text-xs text-[#5E8085] leading-relaxed">
+                <p className="text-xs text-[#587482] leading-relaxed">
                   Please click the link in your inbox to confirm your account, then return to sign in and begin your EduPath journey.
                 </p>
               </div>
@@ -191,7 +191,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate('/login')}
-                  className="w-full py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] transition-colors cursor-pointer shadow-xs"
+                  className="w-full py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] transition-colors cursor-pointer shadow-xs"
                 >
                   Proceed to Sign In
                 </button>
@@ -224,12 +224,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="register-name"
-                    className="block text-xs font-bold text-[#376E7D] uppercase tracking-wider"
+                    className="block text-xs font-bold text-[#174F6B] uppercase tracking-wider"
                   >
                     Preferred Name
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E8085]">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#587482]">
                       <User className="w-4 h-4" />
                     </div>
                     <input
@@ -245,8 +245,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                       placeholder="e.g. Aaryan or Ananya"
                       required
                       disabled={isLoading}
-                      className={`w-full pl-10 pr-4 py-2.5 bg-[#F5FAF9] border rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all disabled:opacity-60 ${
-                        fieldErrors.preferredName ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEBEA]'
+                      className={`w-full pl-10 pr-4 py-2.5 bg-[#F4FAFF] border rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all disabled:opacity-60 ${
+                        fieldErrors.preferredName ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEAF2]'
                       }`}
                     />
                   </div>
@@ -261,12 +261,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="register-email"
-                    className="block text-xs font-bold text-[#376E7D] uppercase tracking-wider"
+                    className="block text-xs font-bold text-[#174F6B] uppercase tracking-wider"
                   >
                     Email Address
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E8085]">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#587482]">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
@@ -283,8 +283,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                       autoComplete="email"
                       required
                       disabled={isLoading}
-                      className={`w-full pl-10 pr-4 py-2.5 bg-[#F5FAF9] border rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all disabled:opacity-60 ${
-                        fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEBEA]'
+                      className={`w-full pl-10 pr-4 py-2.5 bg-[#F4FAFF] border rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all disabled:opacity-60 ${
+                        fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEAF2]'
                       }`}
                     />
                   </div>
@@ -299,12 +299,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="register-password"
-                    className="block text-xs font-bold text-[#376E7D] uppercase tracking-wider"
+                    className="block text-xs font-bold text-[#174F6B] uppercase tracking-wider"
                   >
                     Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E8085]">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#587482]">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
@@ -321,14 +321,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                       autoComplete="new-password"
                       required
                       disabled={isLoading}
-                      className={`w-full pl-10 pr-11 py-2.5 bg-[#F5FAF9] border rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all font-mono disabled:opacity-60 ${
-                        fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEBEA]'
+                      className={`w-full pl-10 pr-11 py-2.5 bg-[#F4FAFF] border rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all font-mono disabled:opacity-60 ${
+                        fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEAF2]'
                       }`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#5E8085] hover:text-[#376E7D] cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#587482] hover:text-[#174F6B] cursor-pointer"
                       tabIndex={-1}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
@@ -340,7 +340,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                       {fieldErrors.password}
                     </p>
                   ) : (
-                    <span className="text-[11px] text-[#5E8085] block">
+                    <span className="text-[11px] text-[#587482] block">
                       Must be at least 8 characters.
                     </span>
                   )}
@@ -350,12 +350,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="register-confirm-password"
-                    className="block text-xs font-bold text-[#376E7D] uppercase tracking-wider"
+                    className="block text-xs font-bold text-[#174F6B] uppercase tracking-wider"
                   >
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E8085]">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#587482]">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
@@ -372,14 +372,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                       autoComplete="new-password"
                       required
                       disabled={isLoading}
-                      className={`w-full pl-10 pr-11 py-2.5 bg-[#F5FAF9] border rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all font-mono disabled:opacity-60 ${
-                        fieldErrors.confirmPassword ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEBEA]'
+                      className={`w-full pl-10 pr-11 py-2.5 bg-[#F4FAFF] border rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all font-mono disabled:opacity-60 ${
+                        fieldErrors.confirmPassword ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEAF2]'
                       }`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#5E8085] hover:text-[#376E7D] cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#587482] hover:text-[#174F6B] cursor-pointer"
                       tabIndex={-1}
                       aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                     >
@@ -407,9 +407,9 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                         }
                       }}
                       disabled={isLoading}
-                      className="h-4 w-4 text-[#367BA8] focus:ring-[#367BA8] border-[#DCEBEA] rounded-sm mt-0.5 cursor-pointer"
+                      className="h-4 w-4 text-[#398FC4] focus:ring-[#398FC4] border-[#DCEAF2] rounded-sm mt-0.5 cursor-pointer"
                     />
-                    <label htmlFor="agree-terms" className="ml-2 block text-xs text-[#5E8085] leading-snug cursor-pointer select-none">
+                    <label htmlFor="agree-terms" className="ml-2 block text-xs text-[#587482] leading-snug cursor-pointer select-none">
                       I agree to the EduPath Privacy Policy and accept that my self-reported reflections will be kept confidential.
                     </label>
                   </div>
@@ -424,7 +424,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 transition-all shadow-xs cursor-pointer disabled:opacity-60 mt-2"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] active:scale-98 transition-all shadow-xs cursor-pointer disabled:opacity-60 mt-2"
                 >
                   {isLoading ? (
                     <>
@@ -438,12 +438,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
               </form>
 
               {/* Switch to Login */}
-              <div className="pt-2 text-center text-xs text-[#5E8085] border-t border-[#DCEBEA]">
+              <div className="pt-2 text-center text-xs text-[#587482] border-t border-[#DCEAF2]">
                 Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => onNavigate('/login')}
-                  className="font-bold text-[#367BA8] hover:text-[#278F89] transition-colors cursor-pointer"
+                  className="font-bold text-[#398FC4] hover:text-[#438F85] transition-colors cursor-pointer"
                 >
                   Sign In
                 </button>

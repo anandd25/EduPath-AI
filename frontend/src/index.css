@@ -1,45 +1,45 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --ep-cream: #F4FAFF;
+  --ep-cream-deep: #EAF5FC;
+  --ep-white: #FFFFFF;
+  --ep-ink: #243D4B;
+  --ep-heading: #174F6B;
+  --ep-muted: #587482;
+  --ep-blue: #398FC4;
+  --ep-sage: #438F85;
+  --ep-mint: #DDF2EF;
+  --ep-border: #DCEAF2;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap');
+
 @layer base {
-  html {
-    scroll-behavior: smooth;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #F5FAF9;
-    color: #376E7D;
-  }
-
-  body {
-    background-color: #F5FAF9;
-    color: #5E8085;
-  }
+  html { scroll-behavior: smooth; font-family: 'DM Sans', 'Plus Jakarta Sans', system-ui, sans-serif; background: var(--ep-cream); color: var(--ep-ink); }
+  body { margin: 0; background: var(--ep-cream); color: var(--ep-ink); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  button, input, select, textarea { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #8AC8E8; outline-offset: 3px; }
+  ::selection { background: #DDF2EF; color: #243D4B; }
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
 }
 
-.font-serif-heading {
-  font-family: 'Newsreader', Georgia, Cambria, 'Times New Roman', Times, serif;
-}
+.font-serif-heading { font-family: 'DM Serif Display', 'Newsreader', Georgia, serif; }
+.bg-edupath-pattern { background-color: var(--ep-cream); background-image: radial-gradient(circle, rgba(57,143,196,.055) 1px, transparent 1px); background-size: 26px 26px; }
 
-/* Subtle clean dotted pattern with Blue & Mint tones */
-.bg-edupath-pattern {
-  background-size: 28px 28px;
-  background-image: 
-    radial-gradient(circle, rgba(54, 123, 168, 0.07) 1px, transparent 1px);
-}
+/* Shared polish across the existing screens */
+input, select, textarea { color: var(--ep-ink); }
+input::placeholder, textarea::placeholder { color: #718B99; opacity: 1; }
+button { transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease; }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  header, footer, nav {
-    display: none !important;
-  }
-  body {
-    background-color: #ffffff !important;
-    color: #376E7D !important;
-    font-size: 11pt;
-  }
-  .print-clean {
-    border: 1px solid #DCEBEA !important;
-    box-shadow: none !important;
-    page-break-inside: avoid;
-  }
+  .no-print, header, footer, nav { display: none !important; }
+  body { background: #fff !important; color: #243D4B !important; font-size: 11pt; }
+  .print-clean { border: 1px solid var(--ep-border) !important; box-shadow: none !important; page-break-inside: avoid; }
 }

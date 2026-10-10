@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { StudentProfileCreate, StudentProfileOut } from './types/studentProfile';
 import { storageService } from './services/storageService';
+import { apiService } from './services/apiService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -27,9 +28,7 @@ function EduPathApp() {
     return storageService.getDraftProfile();
   });
 
-  const [confirmedProfile, setConfirmedProfile] = useState<StudentProfileOut | null>(() => {
-    return storageService.getConfirmedProfile();
-  });
+  const [confirmedProfile, setConfirmedProfile] = useState<StudentProfileOut | null>(null);
 
   const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
@@ -101,6 +100,39 @@ function EduPathApp() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [isAuthenticated, loading, handleNavigate]);
 
+  // The backend database is the source of truth for confirmed profiles.
+  // Local storage is only a convenience cache, never a substitute for a successful save.
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isAuthenticated) {
+      setConfirmedProfile(null);
+      storageService.clearConfirmedProfile();
+      return () => { cancelled = true; };
+    }
+
+    apiService.listProfiles(0, 1)
+      .then((profiles) => {
+        if (cancelled) return;
+        const latestProfile = profiles[0] ?? null;
+        setConfirmedProfile(latestProfile);
+        if (latestProfile) {
+          storageService.saveConfirmedProfile(latestProfile);
+          if (window.location.hash === '#/wizard') window.location.hash = '/profile';
+        } else {
+          storageService.clearConfirmedProfile();
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('Could not load the saved profile from the backend:', error);
+          setRedirectNotice('We could not load your saved profile. Please check that the backend database is configured and try again.');
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated, user?.id]);
+
   // Update preferred name in draft profile when user logs in
   useEffect(() => {
     if (user?.user_metadata?.preferred_name && !draftProfile.preferred_name) {
@@ -111,13 +143,10 @@ function EduPathApp() {
     }
   }, [user, draftProfile.preferred_name]);
 
-  const handleLoginSuccess = (hasExistingProfile: boolean) => {
+  const handleLoginSuccess = (_hasExistingProfile: boolean) => {
     setRedirectNotice(null);
-    if (hasExistingProfile || confirmedProfile) {
-      handleNavigate('/profile');
-    } else {
-      handleNavigate('/wizard');
-    }
+    // The backend fetch in the auth effect decides whether an existing profile is present.
+    handleNavigate(confirmedProfile ? '/profile' : '/wizard');
   };
 
   const handleRegisterSuccess = (needsEmailConfirmation: boolean) => {
@@ -190,14 +219,14 @@ function EduPathApp() {
   // Initial loading state while Supabase checks stored session
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FAF9] text-[#376E7D]">
-        <div className="w-12 h-12 rounded-2xl bg-[#C9E6F8] text-[#367BA8] flex items-center justify-center shadow-2xs mb-3">
-          <Loader2 className="w-6 h-6 animate-spin text-[#367BA8]" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4FAFF] text-[#174F6B]">
+        <div className="w-12 h-12 rounded-2xl bg-[#E7F4FC] text-[#398FC4] flex items-center justify-center shadow-2xs mb-3">
+          <Loader2 className="w-6 h-6 animate-spin text-[#398FC4]" />
         </div>
-        <h2 className="font-serif-heading text-lg font-bold text-[#376E7D]">
+        <h2 className="font-serif-heading text-lg font-bold text-[#174F6B]">
           EduPath
         </h2>
-        <p className="text-xs text-[#5E8085] mt-1">
+        <p className="text-xs text-[#587482] mt-1">
           Loading student session...
         </p>
       </div>
@@ -205,7 +234,7 @@ function EduPathApp() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5FAF9] text-[#376E7D] selection:bg-[#C9E6F8] selection:text-[#376E7D]">
+    <div className="min-h-screen flex flex-col bg-[#F4FAFF] text-[#174F6B] selection:bg-[#E7F4FC] selection:text-[#174F6B]">
       {/* Global Header */}
       <Header
         currentRoute={currentRoute}
@@ -263,15 +292,15 @@ function EduPathApp() {
               />
             ) : (
               <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
-                <h2 className="font-serif-heading text-2xl font-bold text-[#376E7D]">
+                <h2 className="font-serif-heading text-2xl font-bold text-[#174F6B]">
                   No Future Profile Generated Yet
                 </h2>
-                <p className="text-sm text-[#5E8085] max-w-md">
+                <p className="text-sm text-[#587482] max-w-md">
                   Complete the 5-step Class 10 profile wizard to generate and view your personalized Future Profile summary.
                 </p>
                 <button
                   onClick={() => handleNavigate('/wizard')}
-                  className="px-6 py-3 text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] rounded-xl shadow-xs transition-colors cursor-pointer"
+                  className="px-6 py-3 text-xs font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
                   Start Class 10 Profile Wizard
                 </button>

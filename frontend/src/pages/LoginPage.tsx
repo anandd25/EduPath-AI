@@ -147,12 +147,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F5FAF9] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-edupath-pattern">
+    <div className="min-h-screen bg-[#F4FAFF] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-edupath-pattern">
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4">
         {/* Back to Home Link */}
         <button
           onClick={() => onNavigate('/')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5E8085] hover:text-[#376E7D] transition-colors mb-6 cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#587482] hover:text-[#174F6B] transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Return to EduPath Home</span>
@@ -160,20 +160,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#C9E6F8] text-[#367BA8] shadow-2xs mb-1">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#E7F4FC] text-[#398FC4] shadow-2xs mb-1">
             <GraduationCap className="w-6 h-6" />
           </div>
-          <h1 className="font-serif-heading text-3xl font-bold text-[#376E7D] tracking-tight">
+          <h1 className="font-serif-heading text-3xl font-bold text-[#174F6B] tracking-tight">
             Sign In to EduPath
           </h1>
-          <p className="text-sm text-[#5E8085]">
+          <p className="text-sm text-[#587482]">
             Access your Class 10 profile and continue your educational exploration.
           </p>
         </div>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xs rounded-3xl border border-[#DCEBEA] space-y-6">
+        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xs rounded-3xl border border-[#DCEAF2] space-y-6">
           {/* Informational configuration banner if Supabase env vars are pending */}
           {!isConfigured && (
             <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
@@ -189,8 +189,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
           {/* Informational redirect notice if redirected from protected route */}
           {redirectNotice && !errorMessage && (
-            <div className="p-3.5 rounded-xl bg-[#EAF4FF] border border-[#A7D9E6] text-[#367BA8] text-xs flex items-start gap-2.5">
-              <Info className="w-4 h-4 shrink-0 text-[#367BA8] mt-0.5" />
+            <div className="p-3.5 rounded-xl bg-[#EAF5FC] border border-[#C9E2F0] text-[#398FC4] text-xs flex items-start gap-2.5">
+              <Info className="w-4 h-4 shrink-0 text-[#398FC4] mt-0.5" />
               <div className="leading-relaxed">
                 {redirectNotice}
               </div>
@@ -222,12 +222,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className="space-y-1.5">
               <label 
                 htmlFor="login-email"
-                className="block text-xs font-bold text-[#376E7D] uppercase tracking-wider"
+                className="block text-xs font-bold text-[#174F6B] uppercase tracking-wider"
               >
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E8085]">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#587482]">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -242,8 +242,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   autoComplete="email"
                   required
                   disabled={isLoading}
-                  className={`w-full pl-10 pr-4 py-2.5 bg-[#F5FAF9] border rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all disabled:opacity-60 ${
-                    fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEBEA]'
+                  className={`w-full pl-10 pr-4 py-2.5 bg-[#F4FAFF] border rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all disabled:opacity-60 ${
+                    fieldErrors.email ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEAF2]'
                   }`}
                 />
               </div>
@@ -259,7 +259,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div className="flex items-center justify-between">
                 <label 
                   htmlFor="login-password"
-                  className="block text-xs font-bold text-[#376E7D] uppercase tracking-wider"
+                  className="block text-xs font-bold text-[#174F6B] uppercase tracking-wider"
                 >
                   Password
                 </label>
@@ -271,13 +271,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     setForgotError(null);
                     setShowForgotModal(true);
                   }}
-                  className="text-xs font-semibold text-[#367BA8] hover:text-[#278F89] transition-colors cursor-pointer"
+                  className="text-xs font-semibold text-[#398FC4] hover:text-[#438F85] transition-colors cursor-pointer"
                 >
                   Forgot password?
                 </button>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5E8085]">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#587482]">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -292,14 +292,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   autoComplete="current-password"
                   required
                   disabled={isLoading}
-                  className={`w-full pl-10 pr-11 py-2.5 bg-[#F5FAF9] border rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all font-mono disabled:opacity-60 ${
-                    fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEBEA]'
+                  className={`w-full pl-10 pr-11 py-2.5 bg-[#F4FAFF] border rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all font-mono disabled:opacity-60 ${
+                    fieldErrors.password ? 'border-rose-400 focus:ring-rose-400' : 'border-[#DCEAF2]'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#5E8085] hover:text-[#376E7D] cursor-pointer"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#587482] hover:text-[#174F6B] cursor-pointer"
                   tabIndex={-1}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
@@ -320,9 +320,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-[#367BA8] focus:ring-[#367BA8] border-[#DCEBEA] rounded-sm cursor-pointer"
+                className="h-4 w-4 text-[#398FC4] focus:ring-[#398FC4] border-[#DCEAF2] rounded-sm cursor-pointer"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-xs text-[#5E8085] cursor-pointer select-none">
+              <label htmlFor="remember-me" className="ml-2 block text-xs text-[#587482] cursor-pointer select-none">
                 Remember me on this device
               </label>
             </div>
@@ -331,7 +331,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 transition-all shadow-xs cursor-pointer disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] active:scale-98 transition-all shadow-xs cursor-pointer disabled:opacity-60"
             >
               {isLoading ? (
                 <>
@@ -345,12 +345,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </form>
 
           {/* Switch to Register */}
-          <div className="pt-2 text-center text-xs text-[#5E8085] border-t border-[#DCEBEA]">
+          <div className="pt-2 text-center text-xs text-[#587482] border-t border-[#DCEAF2]">
             Don&apos;t have an account?{' '}
             <button
               type="button"
               onClick={() => onNavigate('/register')}
-              className="font-bold text-[#367BA8] hover:text-[#278F89] transition-colors cursor-pointer"
+              className="font-bold text-[#398FC4] hover:text-[#438F85] transition-colors cursor-pointer"
             >
               Register here
             </button>
@@ -361,10 +361,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* Forgot Password Modal (Supabase Password Recovery) */}
       {showForgotModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-[#DCEBEA] animate-in fade-in">
-            <div className="flex items-center gap-2.5 text-[#367BA8]">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-[#DCEAF2] animate-in fade-in">
+            <div className="flex items-center gap-2.5 text-[#398FC4]">
               <Info className="w-5 h-5" />
-              <h3 className="font-bold text-[#376E7D]">Password Recovery</h3>
+              <h3 className="font-bold text-[#174F6B]">Password Recovery</h3>
             </div>
 
             {forgotSuccess ? (
@@ -379,7 +379,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowForgotModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] rounded-xl transition-colors cursor-pointer"
+                    className="px-4 py-2 text-xs font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] rounded-xl transition-colors cursor-pointer"
                   >
                     Done
                   </button>
@@ -387,7 +387,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             ) : (
               <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
-                <p className="text-xs text-[#5E8085] leading-relaxed">
+                <p className="text-xs text-[#587482] leading-relaxed">
                   Enter your registered email address and Supabase Auth will send you a secure link to reset your password.
                 </p>
 
@@ -399,7 +399,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 )}
 
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-bold text-[#376E7D] uppercase tracking-wider">
+                  <label className="block text-[11px] font-bold text-[#174F6B] uppercase tracking-wider">
                     Email Address
                   </label>
                   <input
@@ -409,7 +409,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     placeholder="student@example.com"
                     required
                     disabled={forgotLoading}
-                    className="w-full px-3.5 py-2.5 bg-[#F5FAF9] border border-[#DCEBEA] rounded-xl text-sm text-[#376E7D] focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white"
+                    className="w-full px-3.5 py-2.5 bg-[#F4FAFF] border border-[#DCEAF2] rounded-xl text-sm text-[#174F6B] focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white"
                   />
                 </div>
 
@@ -418,14 +418,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     type="button"
                     onClick={() => setShowForgotModal(false)}
                     disabled={forgotLoading}
-                    className="px-4 py-2 text-xs font-medium text-[#5E8085] hover:text-[#376E7D] rounded-xl transition-colors cursor-pointer"
+                    className="px-4 py-2 text-xs font-medium text-[#587482] hover:text-[#174F6B] rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] rounded-xl transition-colors cursor-pointer disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] rounded-xl transition-colors cursor-pointer disabled:opacity-60"
                   >
                     {forgotLoading ? (
                       <>

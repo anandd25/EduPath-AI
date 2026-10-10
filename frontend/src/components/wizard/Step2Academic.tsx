@@ -78,24 +78,24 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="border-b border-[#DCEBEA] pb-5">
-        <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#376E7D] tracking-tight">
+      <div className="border-b border-[#DCEAF2] pb-5">
+        <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#174F6B] tracking-tight">
           Step 2: Academic Background
         </h2>
-        <p className="text-sm text-[#5E8085] mt-1">
+        <p className="text-sm text-[#587482] mt-1">
           Record your current or completed school subjects. If your marks are not yet available or you prefer not to enter numbers, you can select &ldquo;Results awaited&rdquo; or &ldquo;Marks unavailable&rdquo;. Missing marks are never treated as zero.
         </p>
       </div>
 
       {/* Board reminder banner */}
-      <div className="p-3.5 rounded-xl bg-[#C9E6F8]/40 border border-[#A7D9E6]/60 text-xs text-[#376E7D] flex items-center justify-between">
+      <div className="p-3.5 rounded-xl bg-[#E7F4FC]/40 border border-[#C9E2F0]/60 text-xs text-[#174F6B] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-[#367BA8]" />
+          <BookOpen className="w-4 h-4 text-[#398FC4]" />
           <span>
             Curriculum: <strong className="font-semibold">{profile.curriculum}</strong> ({profile.country})
           </span>
         </div>
-        <span className="text-[#5E8085] hidden sm:inline">
+        <span className="text-[#587482] hidden sm:inline">
           Stage: Class 10
         </span>
       </div>
@@ -103,10 +103,10 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
       {/* Subjects Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#376E7D]">
+          <h3 className="text-sm font-semibold text-[#174F6B]">
             Class 10 Subjects ({profile.subjects.length})
           </h3>
-          <span className="text-xs text-[#5E8085]">
+          <span className="text-xs text-[#587482]">
             Add or remove subjects according to your curriculum
           </span>
         </div>
@@ -122,7 +122,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
             return (
               <div
                 key={idx}
-                className="p-4 rounded-xl bg-white border border-[#DCEBEA] shadow-2xs hover:border-[#367BA8] transition-all space-y-3"
+                className="p-4 rounded-xl bg-white border border-[#DCEAF2] shadow-2xs hover:border-[#398FC4] transition-all space-y-3"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2 flex-1">
@@ -131,7 +131,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                       value={sub.name}
                       onChange={(e) => handleUpdateSubject(idx, { name: e.target.value.slice(0, 100) })}
                       maxLength={100}
-                      className="text-sm font-semibold text-[#376E7D] bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#367BA8] focus:outline-hidden px-1 py-0.5 rounded-xs w-full max-w-sm"
+                      className="text-sm font-semibold text-[#174F6B] bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#398FC4] focus:outline-hidden px-1 py-0.5 rounded-xs w-full max-w-sm"
                     />
                   </div>
 
@@ -143,7 +143,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                         sub.favourite
                           ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                          : 'bg-[#F5FAF9] text-[#5E8085] hover:bg-[#DCEBEA]'
+                          : 'bg-[#F4FAFF] text-[#587482] hover:bg-[#DCEAF2]'
                       }`}
                     >
                       <Heart className={`w-3.5 h-3.5 ${sub.favourite ? 'fill-rose-500 text-rose-500' : ''}`} />
@@ -157,7 +157,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                         sub.challenging
                           ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                          : 'bg-[#F5FAF9] text-[#5E8085] hover:bg-[#DCEBEA]'
+                          : 'bg-[#F4FAFF] text-[#587482] hover:bg-[#DCEAF2]'
                       }`}
                     >
                       <AlertCircle className={`w-3.5 h-3.5 ${sub.challenging ? 'text-amber-600' : ''}`} />
@@ -181,7 +181,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                 {/* Performance status & numeric entry */}
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1 items-center">
                   <div className="sm:col-span-6">
-                    <label className="block text-[11px] font-medium text-[#5E8085] mb-1">
+                    <label className="block text-[11px] font-medium text-[#587482] mb-1">
                       Result Status
                     </label>
                     <select
@@ -193,7 +193,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                           marks: (nextStatus === 'awaited' || nextStatus === 'unavailable') ? null : sub.marks,
                         });
                       }}
-                      className="w-full px-3 py-1.5 bg-[#F5FAF9] border border-[#DCEBEA] rounded-lg text-xs text-[#376E7D] focus:outline-hidden focus:ring-1 focus:ring-[#367BA8] cursor-pointer"
+                      className="w-full px-3 py-1.5 bg-[#F4FAFF] border border-[#DCEAF2] rounded-lg text-xs text-[#174F6B] focus:outline-hidden focus:ring-1 focus:ring-[#398FC4] cursor-pointer"
                     >
                       <option value="completed">{RESULT_STATUS_LABELS.completed}</option>
                       <option value="predicted">{RESULT_STATUS_LABELS.predicted}</option>
@@ -205,7 +205,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                   {(sub.result_status === 'completed' || sub.result_status === 'predicted') ? (
                     <>
                       <div className="sm:col-span-3">
-                        <label className="block text-[11px] font-medium text-[#5E8085] mb-1">
+                        <label className="block text-[11px] font-medium text-[#587482] mb-1">
                           Marks Obtained
                         </label>
                         <input
@@ -218,11 +218,11 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                             handleUpdateSubject(idx, { marks: val });
                           }}
                           placeholder="e.g. 85"
-                          className="w-full px-3 py-1.5 bg-white border border-[#DCEBEA] rounded-lg text-xs font-mono text-[#376E7D] focus:outline-hidden focus:ring-1 focus:ring-[#367BA8]"
+                          className="w-full px-3 py-1.5 bg-white border border-[#DCEAF2] rounded-lg text-xs font-mono text-[#174F6B] focus:outline-hidden focus:ring-1 focus:ring-[#398FC4]"
                         />
                       </div>
                       <div className="sm:col-span-3">
-                        <label className="block text-[11px] font-medium text-[#5E8085] mb-1">
+                        <label className="block text-[11px] font-medium text-[#587482] mb-1">
                           Maximum Marks
                         </label>
                         <input
@@ -234,12 +234,12 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                             const val = e.target.value === '' ? 100 : Math.max(1, Number(e.target.value));
                             handleUpdateSubject(idx, { maximum_marks: val });
                           }}
-                          className="w-full px-3 py-1.5 bg-white border border-[#DCEBEA] rounded-lg text-xs font-mono text-[#376E7D] focus:outline-hidden focus:ring-1 focus:ring-[#367BA8]"
+                          className="w-full px-3 py-1.5 bg-white border border-[#DCEAF2] rounded-lg text-xs font-mono text-[#174F6B] focus:outline-hidden focus:ring-1 focus:ring-[#398FC4]"
                         />
                       </div>
                     </>
                   ) : (
-                    <div className="sm:col-span-6 text-xs text-[#5E8085] italic py-1.5">
+                    <div className="sm:col-span-6 text-xs text-[#587482] italic py-1.5">
                       No numeric score recorded. Not treated as zero.
                     </div>
                   )}
@@ -268,13 +268,13 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
               }
             }}
             placeholder="Add subject (e.g. Computer Applications, Sanskrit, Economics)"
-            className="flex-1 px-3.5 py-2 text-xs bg-white border border-[#DCEBEA] rounded-xl text-[#376E7D] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#367BA8]"
+            className="flex-1 px-3.5 py-2 text-xs bg-white border border-[#DCEAF2] rounded-xl text-[#174F6B] placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#398FC4]"
           />
           <button
             type="button"
             onClick={handleAddSubject}
             disabled={!newSubjectName.trim()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#367BA8] text-white rounded-xl text-xs font-semibold hover:bg-[#2e688e] disabled:opacity-40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#398FC4] text-white rounded-xl text-xs font-semibold hover:bg-[#174F6B] disabled:opacity-40 transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Subject</span>
@@ -283,16 +283,16 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
       </div>
 
       {/* Overall percentage & status */}
-      <div className="p-5 rounded-2xl bg-[#F5FAF9] border border-[#DCEBEA] space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-[#DCEBEA]">
+      <div className="p-5 rounded-2xl bg-[#F4FAFF] border border-[#DCEAF2] space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-[#DCEAF2]">
           <div className="flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-[#367BA8]" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#376E7D]">
+            <Calculator className="w-4 h-4 text-[#398FC4]" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#174F6B]">
               Overall Academic Performance
             </h4>
           </div>
           {calculatedAverage && (
-            <span className="text-xs font-mono font-medium text-[#367BA8] bg-[#C9E6F8]/60 px-2.5 py-0.5 rounded-md">
+            <span className="text-xs font-mono font-medium text-[#398FC4] bg-[#E7F4FC]/60 px-2.5 py-0.5 rounded-md">
               Calculated Avg: {calculatedAverage}%
             </span>
           )}
@@ -300,8 +300,8 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-[#376E7D] mb-1">
-              Overall Result Status <span className="text-[#367BA8]">*</span>
+            <label className="block text-xs font-semibold text-[#174F6B] mb-1">
+              Overall Result Status <span className="text-[#398FC4]">*</span>
             </label>
             <select
               value={profile.overall_result_status}
@@ -312,7 +312,7 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                   overall_percentage: (status === 'awaited' || status === 'unavailable') ? null : profile.overall_percentage,
                 });
               }}
-              className="w-full px-3 py-2 bg-white border border-[#DCEBEA] rounded-lg text-xs text-[#376E7D] focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] cursor-pointer"
+              className="w-full px-3 py-2 bg-white border border-[#DCEAF2] rounded-lg text-xs text-[#174F6B] focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] cursor-pointer"
             >
               <option value="completed">{RESULT_STATUS_LABELS.completed}</option>
               <option value="predicted">{RESULT_STATUS_LABELS.predicted}</option>
@@ -322,8 +322,8 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#376E7D] mb-1">
-              Overall Percentage (%) <span className="text-xs font-normal text-[#5E8085]">(0 - 100)</span>
+            <label className="block text-xs font-semibold text-[#174F6B] mb-1">
+              Overall Percentage (%) <span className="text-xs font-normal text-[#587482]">(0 - 100)</span>
             </label>
             <input
               type="number"
@@ -337,12 +337,12 @@ export const Step2Academic: React.FC<Step2Props> = ({ profile, onChange, errors 
                 onChange({ overall_percentage: val });
               }}
               placeholder={calculatedAverage ? `e.g. ${calculatedAverage}` : 'e.g. 88.5'}
-              className="w-full px-3 py-2 bg-white border border-[#DCEBEA] rounded-lg text-xs font-mono text-[#376E7D] focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] disabled:bg-[#F5FAF9] disabled:text-slate-400"
+              className="w-full px-3 py-2 bg-white border border-[#DCEAF2] rounded-lg text-xs font-mono text-[#174F6B] focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] disabled:bg-[#F4FAFF] disabled:text-slate-400"
             />
           </div>
         </div>
 
-        <p className="text-[11px] text-[#5E8085]">
+        <p className="text-[11px] text-[#587482]">
           EduPath never uses unreleased marks to penalize students. Unavailable results are clearly distinguished from zero.
         </p>
       </div>

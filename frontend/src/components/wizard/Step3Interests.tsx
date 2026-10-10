@@ -60,11 +60,11 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
   return (
     <div className="space-y-10">
       {/* Header */}
-      <div className="border-b border-[#DCEBEA] pb-5">
-        <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#376E7D] tracking-tight">
+      <div className="border-b border-[#DCEAF2] pb-5">
+        <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#174F6B] tracking-tight">
           Step 3: Interests & Strengths
         </h2>
-        <p className="text-sm text-[#5E8085] mt-1 leading-relaxed">
+        <p className="text-sm text-[#587482] mt-1 leading-relaxed">
           Your interests and personal reflections help uncover what subjects and activities energize you.
         </p>
       </div>
@@ -73,14 +73,14 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
       <section className="space-y-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-[#376E7D]">
+            <h3 className="text-base font-bold text-[#174F6B]">
               A. Explore Your Interests
             </h3>
-            <span className="text-xs text-[#367BA8] font-semibold">
+            <span className="text-xs text-[#398FC4] font-semibold">
               · Select all that apply
             </span>
           </div>
-          <p className="text-xs text-[#5E8085] mt-0.5">
+          <p className="text-xs text-[#587482] mt-0.5">
             Choose what you enjoy learning, creating, or doing. Multiple selections are encouraged.
           </p>
         </div>
@@ -100,15 +100,15 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
                 onClick={() => toggleInterest(item.id)}
                 className={`p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer flex items-start gap-3 shadow-2xs ${
                   isSelected
-                    ? 'bg-[#C9E6F8]/50 border-[#367BA8] ring-1 ring-[#367BA8]'
-                    : 'bg-white border-[#DCEBEA] hover:border-[#367BA8] hover:bg-[#F5FAF9]'
+                    ? 'bg-[#E7F4FC]/50 border-[#398FC4] ring-1 ring-[#398FC4]'
+                    : 'bg-white border-[#DCEAF2] hover:border-[#398FC4] hover:bg-[#F4FAFF]'
                 }`}
               >
                 <div
                   className={`p-2 rounded-lg shrink-0 ${
                     isSelected
-                      ? 'bg-[#367BA8] text-white'
-                      : 'bg-[#F5FAF9] text-[#367BA8]'
+                      ? 'bg-[#398FC4] text-white'
+                      : 'bg-[#F4FAFF] text-[#398FC4]'
                   }`}
                 >
                   <InterestIcon name={item.iconName} className="w-4.5 h-4.5" />
@@ -116,20 +116,20 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <span className="text-sm font-bold text-[#376E7D]">
+                    <span className="text-sm font-bold text-[#174F6B]">
                       {item.title}
                     </span>
                     <div
                       className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${
                         isSelected
-                          ? 'bg-[#367BA8] border-[#367BA8] text-white'
+                          ? 'bg-[#398FC4] border-[#398FC4] text-white'
                           : 'border-slate-300'
                       }`}
                     >
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
                   </div>
-                  <p className="text-xs text-[#5E8085] leading-relaxed">
+                  <p className="text-xs text-[#587482] leading-relaxed">
                     {item.description}
                   </p>
                 </div>
@@ -140,17 +140,17 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
       </section>
 
       {/* Part B: Discover Your Strengths */}
-      <section className="space-y-4 pt-4 border-t border-[#DCEBEA]">
+      <section className="space-y-4 pt-4 border-t border-[#DCEAF2]">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-[#376E7D]">
+            <h3 className="text-base font-bold text-[#174F6B]">
               B. Discover Your Strengths
             </h3>
-            <span className="text-xs text-[#278F89] font-semibold">
+            <span className="text-xs text-[#438F85] font-semibold">
               · Self-Reported Reflection
             </span>
           </div>
-          <p className="text-xs text-[#5E8085] mt-0.5">
+          <p className="text-xs text-[#587482] mt-0.5">
             How comfortable do you feel with these activities? These ratings are personal reflections, not scientifically validated aptitude scores.
           </p>
         </div>
@@ -164,18 +164,18 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
             return (
               <div
                 key={item.key}
-                className="p-3.5 rounded-xl bg-white border border-[#DCEBEA] shadow-2xs space-y-2"
+                className="p-3.5 rounded-xl bg-white border border-[#DCEAF2] shadow-2xs space-y-2"
               >
                 <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
                   <div>
-                    <h4 className="text-xs font-bold text-[#376E7D]">
+                    <h4 className="text-xs font-bold text-[#174F6B]">
                       {item.label}
                     </h4>
-                    <p className="text-[11px] text-[#5E8085]">
+                    <p className="text-[11px] text-[#587482]">
                       {item.description}
                     </p>
                   </div>
-                  <div className="text-[11px] font-semibold text-[#367BA8] shrink-0">
+                  <div className="text-[11px] font-semibold text-[#398FC4] shrink-0">
                     {isNotSure ? 'Not sure yet' : `Level ${currentRating} of 5`}
                   </div>
                 </div>
@@ -191,8 +191,8 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
                         onClick={() => handleSetStrength(item.key, lvl, false)}
                         className={`flex-1 min-w-[42px] py-1.5 px-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer text-center ${
                           isPicked
-                            ? 'bg-[#367BA8] text-white border-[#367BA8]'
-                            : 'bg-[#F5FAF9] border-[#DCEBEA] text-[#376E7D] hover:bg-[#C9E6F8]/40'
+                            ? 'bg-[#398FC4] text-white border-[#398FC4]'
+                            : 'bg-[#F4FAFF] border-[#DCEAF2] text-[#174F6B] hover:bg-[#E7F4FC]/40'
                         }`}
                       >
                         {lvl}
@@ -205,8 +205,8 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
                     onClick={() => handleSetStrength(item.key, null, true)}
                     className={`py-1.5 px-3 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                       isNotSure
-                        ? 'bg-[#376E7D] text-white border-[#376E7D]'
-                        : 'bg-white border-[#DCEBEA] text-[#5E8085] hover:bg-[#F5FAF9]'
+                        ? 'bg-[#174F6B] text-white border-[#174F6B]'
+                        : 'bg-white border-[#DCEAF2] text-[#587482] hover:bg-[#F4FAFF]'
                     }`}
                   >
                     Not sure
@@ -219,37 +219,37 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
       </section>
 
       {/* Part C: Written Interest Description */}
-      <section className="space-y-4 pt-4 border-t border-[#DCEBEA]">
+      <section className="space-y-4 pt-4 border-t border-[#DCEAF2]">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-[#C9E6F8] text-[#367BA8]">
+            <div className="p-1 rounded-md bg-[#E7F4FC] text-[#398FC4]">
               <PenTool className="w-4 h-4" />
             </div>
-            <h3 className="text-base font-bold text-[#376E7D]">
+            <h3 className="text-base font-bold text-[#174F6B]">
               Tell Us More About What You Love
             </h3>
-            <span className="text-xs text-[#5E8085] font-normal">
+            <span className="text-xs text-[#587482] font-normal">
               (Optional)
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-[#5E8085] mt-1 leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#587482] mt-1 leading-relaxed">
             Your selections tell us a little about you, but your own words can tell us much more. Describe the subjects you enjoy, the activities that excite you, the things you love creating or learning, and the problems you would like to solve.
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#DCEBEA] p-4 sm:p-5 shadow-2xs space-y-3">
+        <div className="bg-white rounded-2xl border border-[#DCEAF2] p-4 sm:p-5 shadow-2xs space-y-3">
           <textarea
             rows={5}
             maxLength={maxChars}
             value={profile.interest_description}
             onChange={(e) => onChange({ interest_description: e.target.value.slice(0, maxChars) })}
             placeholder="I enjoy solving mathematical problems and exploring how technology works. I like experimenting with computers, learning new things independently, and creating projects that solve real-world problems. I am still exploring which career might suit me best."
-            className="w-full p-3 bg-[#F5FAF9] border border-[#DCEBEA] rounded-xl text-sm text-[#376E7D] placeholder:text-slate-400 leading-relaxed focus:outline-hidden focus:ring-2 focus:ring-[#367BA8] focus:bg-white transition-all resize-y"
+            className="w-full p-3 bg-[#F4FAFF] border border-[#DCEAF2] rounded-xl text-sm text-[#174F6B] placeholder:text-slate-400 leading-relaxed focus:outline-hidden focus:ring-2 focus:ring-[#398FC4] focus:bg-white transition-all resize-y"
           />
 
           {/* Clickable writing prompts */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-[#376E7D]">
+            <span className="text-xs font-semibold text-[#174F6B]">
               Writing prompts for inspiration (click to add):
             </span>
             <div className="flex flex-wrap gap-2">
@@ -258,7 +258,7 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
                   key={idx}
                   type="button"
                   onClick={() => handleInsertPrompt(prompt)}
-                  className="text-left text-xs text-[#278F89] bg-[#CDEDE2]/40 hover:bg-[#CDEDE2] border border-[#CDEDE2] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  className="text-left text-xs text-[#438F85] bg-[#DDF2EF]/40 hover:bg-[#DDF2EF] border border-[#DDF2EF] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   &ldquo;{prompt}&rdquo;
                 </button>
@@ -267,12 +267,12 @@ export const Step3Interests: React.FC<Step3Props> = ({ profile, onChange, errors
           </div>
 
           {/* Character counter & safety note */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[#DCEBEA] text-xs text-[#5E8085]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[#DCEAF2] text-xs text-[#587482]">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#278F89] shrink-0" />
+              <ShieldCheck className="w-3.5 h-3.5 text-[#438F85] shrink-0" />
               <span>Preserved verbatim without automated rewriting. Maximum 1000 characters.</span>
             </div>
-            <div className="font-mono text-[#376E7D] shrink-0">
+            <div className="font-mono text-[#174F6B] shrink-0">
               {currentChars} / {maxChars} characters
             </div>
           </div>

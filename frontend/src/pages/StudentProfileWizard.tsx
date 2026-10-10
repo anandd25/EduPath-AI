@@ -14,7 +14,6 @@ import {
   RotateCcw,
   AlertCircle,
   Info,
-  Sparkles
 } from 'lucide-react';
 
 interface WizardProps {
@@ -96,7 +95,6 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [fallbackProfileData, setFallbackProfileData] = useState<StudentProfileOut | null>(null);
 
   // Sync draft to local storage
   useEffect(() => {
@@ -178,7 +176,6 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     setSubmitError(null);
-    setFallbackProfileData(null);
 
     // Sanitize payload matching OpenAPI constraints
     const payload: StudentProfileCreate = {
@@ -222,22 +219,14 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
       career_certainty: profile.career_certainty,
     };
 
-    const fallbackProfile: StudentProfileOut = {
-      ...payload,
-      id: existingProfileId || Date.now(),
-      subjects: payload.subjects.map((s, i) => ({ ...s, id: i + 1 })),
-      strengths: payload.strengths.map((st, i) => ({ ...st, id: i + 1 })),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
     try {
       let savedResult: StudentProfileOut;
       if (existingProfileId) {
         try {
           savedResult = await apiService.updateProfile(existingProfileId, payload);
-        } catch {
-          // If update fails (e.g. 404), fall back to create
+        } catch (updateError) {
+          // Only create a new row if the backend confirms the saved row no longer exists.
+          if ((updateError as ApiError).statusCode !== 404) throw updateError;
           savedResult = await apiService.createProfile(payload);
         }
       } else {
@@ -247,20 +236,12 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
       storageService.saveConfirmedProfile(savedResult);
       onComplete(savedResult);
     } catch (err: any) {
-      console.warn('Backend save encountered an issue:', err);
+      console.error('Profile could not be saved to the backend:', err);
       const apiErr = err as ApiError;
-      const msg = apiErr.message || 'The EduPath backend server is currently taking longer to respond. Your data is safely held in your browser session.';
-      setSubmitError(msg);
-      setFallbackProfileData(fallbackProfile);
+      const msg = apiErr.message || 'Your profile could not be saved to the database. Please try again.';
+      setSubmitError(`${msg} Your profile has not been marked as saved. Please check your connection and try again.`);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleProceedOffline = () => {
-    if (fallbackProfileData) {
-      storageService.saveConfirmedProfile(fallbackProfileData);
-      onComplete(fallbackProfileData);
     }
   };
 
@@ -274,15 +255,15 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
   const currentMeta = STEPS_CONFIG[currentStep - 1];
 
   return (
-    <div className="min-h-screen bg-[#F5FAF9] text-[#376E7D] pb-20 bg-edupath-pattern">
+    <div className="min-h-screen bg-[#F4FAFF] text-[#174F6B] pb-20 bg-edupath-pattern">
       {/* Top Wizard Bar */}
-      <div className="sticky top-0 z-40 bg-white border-b border-[#DCEBEA] shadow-2xs">
+      <div className="sticky top-0 z-40 bg-white border-b border-[#DCEAF2] shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex items-center justify-between gap-4">
             {/* Back button */}
             <button
               onClick={handleBack}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5E8085] hover:text-[#376E7D] px-2.5 py-1.5 rounded-lg hover:bg-[#F5FAF9] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#587482] hover:text-[#174F6B] px-2.5 py-1.5 rounded-lg hover:bg-[#F4FAFF] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{currentStep === 1 ? 'Back to Overview' : 'Previous Step'}</span>
@@ -290,10 +271,10 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
 
             {/* Compact step summary */}
             <div className="text-center">
-              <span className="text-xs font-medium text-[#5E8085]">
-                Step <span className="font-mono text-[#376E7D] font-semibold">{currentStep}</span> of 5
+              <span className="text-xs font-medium text-[#587482]">
+                Step <span className="font-mono text-[#174F6B] font-semibold">{currentStep}</span> of 5
               </span>
-              <div className="text-sm font-bold text-[#376E7D] tracking-tight hidden sm:block">
+              <div className="text-sm font-bold text-[#174F6B] tracking-tight hidden sm:block">
                 {currentMeta.title}
               </div>
             </div>
@@ -311,9 +292,9 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
           </div>
 
           {/* Progress bar with Blue & Mint palette */}
-          <div className="w-full bg-[#CDEDE2]/60 h-1.5 rounded-full overflow-hidden mt-3">
+          <div className="w-full bg-[#DDF2EF]/60 h-1.5 rounded-full overflow-hidden mt-3">
             <div
-              className="bg-[#367BA8] h-full transition-all duration-300 rounded-full"
+              className="bg-[#398FC4] h-full transition-all duration-300 rounded-full"
               style={{ width: `${(currentStep / 5) * 100}%` }}
             />
           </div>
@@ -324,7 +305,7 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Main Form Area */}
-          <div className="lg:col-span-8 bg-white rounded-3xl border border-[#DCEBEA] p-6 sm:p-10 shadow-2xs">
+          <div className="lg:col-span-8 bg-white rounded-3xl border border-[#DCEAF2] p-6 sm:p-10 shadow-2xs">
             {currentStep === 1 && (
               <Step1AboutYou
                 profile={profile}
@@ -363,37 +344,17 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
                   submitError={submitError}
                 />
 
-                {/* Offline Fallback Banner if server encountered an issue */}
-                {fallbackProfileData && (
-                  <div className="p-4 rounded-2xl bg-[#CDEDE2]/40 border border-[#278F89]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-                    <div className="space-y-1">
-                      <div className="font-bold text-[#278F89] flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-[#278F89]" />
-                        <span>Ready to View Future Profile</span>
-                      </div>
-                      <p className="text-[#5E8085]">
-                        Your answers are complete! You can view your full Future Profile summary immediately.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleProceedOffline}
-                      className="px-4 py-2 text-xs font-semibold text-white bg-[#278F89] hover:bg-[#1f736e] rounded-xl transition-colors cursor-pointer shrink-0 shadow-2xs"
-                    >
-                      View Future Profile Now
-                    </button>
-                  </div>
-                )}
+
               </div>
             )}
 
             {/* Bottom Nav Controls */}
             {currentStep < 5 && (
-              <div className="pt-10 mt-10 border-t border-[#DCEBEA] flex items-center justify-between gap-4">
+              <div className="pt-10 mt-10 border-t border-[#DCEAF2] flex items-center justify-between gap-4">
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="px-5 py-2.5 text-xs font-semibold text-[#5E8085] bg-[#F5FAF9] hover:bg-[#C9E6F8]/40 border border-[#DCEBEA] rounded-xl transition-colors cursor-pointer"
+                  className="px-5 py-2.5 text-xs font-semibold text-[#587482] bg-[#F4FAFF] hover:bg-[#E7F4FC]/40 border border-[#DCEAF2] rounded-xl transition-colors cursor-pointer"
                 >
                   {currentStep === 1 ? 'Cancel & Return' : 'Back'}
                 </button>
@@ -401,7 +362,7 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex items-center gap-2 px-7 py-3 text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-7 py-3 text-sm font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   <span>Continue</span>
                   <ArrowRight className="w-4 h-4" />
@@ -413,8 +374,8 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
           {/* Desktop Right Sidebar */}
           <aside className="hidden lg:block lg:col-span-4 space-y-6 sticky top-24">
             {/* Step Directory */}
-            <div className="bg-white rounded-2xl border border-[#DCEBEA] p-5 shadow-2xs space-y-3">
-              <h4 className="text-xs font-bold text-[#376E7D] uppercase tracking-wider">
+            <div className="bg-white rounded-2xl border border-[#DCEAF2] p-5 shadow-2xs space-y-3">
+              <h4 className="text-xs font-bold text-[#174F6B] uppercase tracking-wider">
                 Discovery Steps
               </h4>
               <div className="space-y-1.5">
@@ -429,20 +390,20 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
                       onClick={() => handleJumpToStep(step.number)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-medium text-left transition-all cursor-pointer ${
                         isCurrent
-                          ? 'bg-[#C9E6F8]/60 text-[#367BA8] font-semibold border border-[#A7D9E6]'
+                          ? 'bg-[#E7F4FC]/60 text-[#398FC4] font-semibold border border-[#C9E2F0]'
                           : isPassed
-                          ? 'text-[#376E7D] hover:bg-[#F5FAF9]'
-                          : 'text-[#5E8085] hover:bg-[#F5FAF9]'
+                          ? 'text-[#174F6B] hover:bg-[#F4FAFF]'
+                          : 'text-[#587482] hover:bg-[#F4FAFF]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <div
                           className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
                             isCurrent
-                              ? 'bg-[#367BA8] text-white'
+                              ? 'bg-[#398FC4] text-white'
                               : isPassed
-                              ? 'bg-[#CDEDE2] text-[#278F89]'
-                              : 'bg-slate-100 text-[#5E8085]'
+                              ? 'bg-[#DDF2EF] text-[#438F85]'
+                              : 'bg-slate-100 text-[#587482]'
                           }`}
                         >
                           {isPassed ? <Check className="w-3.5 h-3.5" /> : step.number}
@@ -450,7 +411,7 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
                         <span>{step.title}</span>
                       </div>
                       {isCurrent && (
-                        <span className="text-[10px] text-[#367BA8] font-bold uppercase tracking-wider">
+                        <span className="text-[10px] text-[#398FC4] font-bold uppercase tracking-wider">
                           Active
                         </span>
                       )}
@@ -461,23 +422,23 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
             </div>
 
             {/* Guidance Panel in Sky Blue */}
-            <div className="bg-[#C9E6F8]/40 rounded-2xl border border-[#A7D9E6]/60 p-5 space-y-3 shadow-2xs">
-              <div className="flex items-center gap-2 text-[#367BA8] text-xs font-bold">
-                <Info className="w-4 h-4 text-[#367BA8]" />
+            <div className="bg-[#E7F4FC]/40 rounded-2xl border border-[#C9E2F0]/60 p-5 space-y-3 shadow-2xs">
+              <div className="flex items-center gap-2 text-[#398FC4] text-xs font-bold">
+                <Info className="w-4 h-4 text-[#398FC4]" />
                 <span>Guidance for Step {currentStep}</span>
               </div>
-              <p className="text-xs text-[#5E8085] leading-relaxed">
+              <p className="text-xs text-[#587482] leading-relaxed">
                 {currentMeta.guidance}
               </p>
 
-              <div className="pt-2 border-t border-[#A7D9E6]/40 space-y-1.5">
-                <span className="text-[11px] font-semibold text-[#376E7D] block">
+              <div className="pt-2 border-t border-[#C9E2F0]/40 space-y-1.5">
+                <span className="text-[11px] font-semibold text-[#174F6B] block">
                   Helpful principles:
                 </span>
-                <ul className="space-y-1 text-[11px] text-[#5E8085]">
+                <ul className="space-y-1 text-[11px] text-[#587482]">
                   {currentMeta.tips.map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-[#367BA8] font-bold">&middot;</span>
+                      <span className="text-[#398FC4] font-bold">&middot;</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -486,9 +447,9 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
             </div>
 
             {/* Persistence Transparency in Mint */}
-            <div className="p-4 rounded-xl bg-white border border-[#DCEBEA] text-[11px] text-[#5E8085] space-y-1 shadow-2xs">
-              <div className="font-semibold text-[#376E7D] flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#278F89]" />
+            <div className="p-4 rounded-xl bg-white border border-[#DCEAF2] text-[11px] text-[#587482] space-y-1 shadow-2xs">
+              <div className="font-semibold text-[#174F6B] flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#438F85]" />
                 <span>State Auto-Saved</span>
               </div>
               <p>
@@ -502,18 +463,18 @@ export const StudentProfileWizard: React.FC<WizardProps> = ({
       {/* Reset Confirmation Dialog */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-2xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-[#DCEBEA]">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-[#DCEAF2]">
             <div className="flex items-center gap-2 text-rose-600">
               <AlertCircle className="w-5 h-5" />
-              <h4 className="font-bold text-[#376E7D]">Reset Form?</h4>
+              <h4 className="font-bold text-[#174F6B]">Reset Form?</h4>
             </div>
-            <p className="text-xs text-[#5E8085] leading-relaxed">
+            <p className="text-xs text-[#587482] leading-relaxed">
               This will clear your draft answers and reset the form to standard defaults.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="px-3.5 py-1.5 text-xs font-semibold text-[#5E8085] hover:bg-[#F5FAF9] rounded-xl transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-semibold text-[#587482] hover:bg-[#F4FAFF] rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>

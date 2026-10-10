@@ -29,13 +29,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-3">
-        <div className="w-12 h-12 rounded-2xl bg-[#C9E6F8] text-[#367BA8] flex items-center justify-center shadow-2xs">
-          <Loader2 className="w-6 h-6 animate-spin text-[#367BA8]" />
+        <div className="w-12 h-12 rounded-2xl bg-[#E7F4FC] text-[#398FC4] flex items-center justify-center shadow-2xs">
+          <Loader2 className="w-6 h-6 animate-spin text-[#398FC4]" />
         </div>
-        <p className="text-sm font-semibold text-[#376E7D]">
+        <p className="text-sm font-semibold text-[#174F6B]">
           Checking student session...
         </p>
-        <p className="text-xs text-[#5E8085]">
+        <p className="text-xs text-[#587482]">
           Preparing your EduPath journey.
         </p>
       </div>

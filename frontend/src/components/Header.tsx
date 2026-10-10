@@ -69,47 +69,47 @@ export const Header: React.FC<HeaderProps> = ({
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-[#DCEBEA] py-3.5 transition-all shadow-2xs">
+    <header className="sticky top-0 z-50 bg-white border-b border-[#DCEAF2] py-3.5 transition-all shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-6">
           {/* Logo & Wordmark */}
           <button
             onClick={() => handleLinkClick('/')}
-            className="flex items-center gap-2.5 text-left group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#367BA8] rounded-lg cursor-pointer"
+            className="flex items-center gap-2.5 text-left group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#398FC4] rounded-lg cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#C9E6F8] text-[#367BA8] flex items-center justify-center shadow-2xs group-hover:bg-[#367BA8] group-hover:text-white transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-[#E7F4FC] text-[#398FC4] flex items-center justify-center shadow-2xs group-hover:bg-[#398FC4] group-hover:text-white transition-colors">
               <GraduationCap className="w-5 h-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-[#376E7D]">
+            <span className="text-xl font-bold tracking-tight text-[#174F6B]">
               EduPath
             </span>
           </button>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#5E8085]">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#587482]">
             <button
               onClick={() => handleLinkClick('/')}
-              className={`hover:text-[#376E7D] transition-colors whitespace-nowrap cursor-pointer ${
-                currentRoute === '/' ? 'text-[#367BA8] font-bold' : ''
+              className={`hover:text-[#174F6B] transition-colors whitespace-nowrap cursor-pointer ${
+                currentRoute === '/' ? 'text-[#398FC4] font-bold' : ''
               }`}
             >
               Home
             </button>
             <button
               onClick={() => handleNavClick('how-it-works')}
-              className="hover:text-[#376E7D] transition-colors whitespace-nowrap cursor-pointer"
+              className="hover:text-[#174F6B] transition-colors whitespace-nowrap cursor-pointer"
             >
               How It Works
             </button>
             <button
               onClick={() => handleNavClick('features')}
-              className="hover:text-[#376E7D] transition-colors whitespace-nowrap cursor-pointer"
+              className="hover:text-[#174F6B] transition-colors whitespace-nowrap cursor-pointer"
             >
               Features
             </button>
             <button
               onClick={() => handleNavClick('about')}
-              className="hover:text-[#376E7D] transition-colors whitespace-nowrap cursor-pointer"
+              className="hover:text-[#174F6B] transition-colors whitespace-nowrap cursor-pointer"
             >
               About
             </button>
@@ -122,41 +122,41 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setAccountMenuOpen(!accountMenuOpen)}
-                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl border border-[#DCEBEA] bg-[#F5FAF9] hover:bg-[#EAF4FF] hover:border-[#A7D9E6] transition-all text-left cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#367BA8]"
+                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl border border-[#DCEAF2] bg-[#F4FAFF] hover:bg-[#EAF5FC] hover:border-[#C9E2F0] transition-all text-left cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#398FC4]"
                   aria-expanded={accountMenuOpen}
                   aria-haspopup="true"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-[#367BA8] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-[#398FC4] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
                     {initial}
                   </div>
                   <div className="flex flex-col text-left">
-                    <span className="text-xs font-bold text-[#376E7D] leading-tight max-w-[120px] truncate">
+                    <span className="text-xs font-bold text-[#174F6B] leading-tight max-w-[120px] truncate">
                       {displayName}
                     </span>
-                    <span className="text-[10px] text-[#5E8085] leading-none">
+                    <span className="text-[10px] text-[#587482] leading-none">
                       Class 10 Student
                     </span>
                   </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-[#5E8085] transition-transform duration-150 ${accountMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-[#587482] transition-transform duration-150 ${accountMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Compact Account Dropdown Menu */}
                 {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-[#DCEBEA] shadow-lg py-2 z-50 animate-in fade-in duration-100">
-                    <div className="px-3.5 py-2 border-b border-[#DCEBEA] mb-1">
-                      <p className="text-xs font-bold text-[#376E7D] truncate">
+                  <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-[#DCEAF2] shadow-lg py-2 z-50 animate-in fade-in duration-100">
+                    <div className="px-3.5 py-2 border-b border-[#DCEAF2] mb-1">
+                      <p className="text-xs font-bold text-[#174F6B] truncate">
                         {displayName}
                       </p>
-                      <p className="text-[11px] text-[#5E8085] truncate font-mono">
+                      <p className="text-[11px] text-[#587482] truncate font-mono">
                         {user.email}
                       </p>
                     </div>
 
                     <button
                       onClick={() => handleLinkClick('/profile')}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-[#376E7D] hover:bg-[#F5FAF9] hover:text-[#367BA8] transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-[#174F6B] hover:bg-[#F4FAFF] hover:text-[#398FC4] transition-colors cursor-pointer text-left"
                     >
-                      <FileText className="w-4 h-4 text-[#367BA8]" />
+                      <FileText className="w-4 h-4 text-[#398FC4]" />
                       <span>My Profile</span>
                     </button>
 
@@ -174,13 +174,13 @@ export const Header: React.FC<HeaderProps> = ({
               <>
                 <button
                   onClick={() => handleLinkClick('/login')}
-                  className="px-3.5 py-2 text-xs font-semibold text-[#367BA8] hover:text-[#278F89] border border-transparent hover:border-[#DCEBEA] rounded-xl transition-all whitespace-nowrap cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#398FC4] hover:text-[#438F85] border border-transparent hover:border-[#DCEAF2] rounded-xl transition-all whitespace-nowrap cursor-pointer"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => handleLinkClick('/register')}
-                  className="inline-flex items-center gap-1.5 px-4.5 py-2 text-xs font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-2xs transition-all whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4.5 py-2 text-xs font-semibold text-white bg-[#398FC4] hover:bg-[#174F6B] active:scale-98 rounded-xl shadow-2xs transition-all whitespace-nowrap cursor-pointer"
                 >
                   <span>Register</span>
                 </button>
@@ -192,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex md:hidden items-center gap-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-[#5E8085] hover:text-[#376E7D] rounded-lg border border-[#DCEBEA] cursor-pointer"
+              className="p-2 text-[#587482] hover:text-[#174F6B] rounded-lg border border-[#DCEAF2] cursor-pointer"
               aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -202,46 +202,46 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden pt-4 pb-3 border-t border-[#DCEBEA] mt-3 space-y-3 animate-in fade-in duration-150">
-            <nav className="flex flex-col space-y-1 text-sm font-medium text-[#5E8085]">
+          <div className="md:hidden pt-4 pb-3 border-t border-[#DCEAF2] mt-3 space-y-3 animate-in fade-in duration-150">
+            <nav className="flex flex-col space-y-1 text-sm font-medium text-[#587482]">
               <button
                 onClick={() => handleLinkClick('/')}
-                className="text-left px-3 py-2 rounded-lg hover:bg-[#F5FAF9] hover:text-[#376E7D]"
+                className="text-left px-3 py-2 rounded-lg hover:bg-[#F4FAFF] hover:text-[#174F6B]"
               >
                 Home
               </button>
               <button
                 onClick={() => handleNavClick('how-it-works')}
-                className="text-left px-3 py-2 rounded-lg hover:bg-[#F5FAF9] hover:text-[#376E7D]"
+                className="text-left px-3 py-2 rounded-lg hover:bg-[#F4FAFF] hover:text-[#174F6B]"
               >
                 How It Works
               </button>
               <button
                 onClick={() => handleNavClick('features')}
-                className="text-left px-3 py-2 rounded-lg hover:bg-[#F5FAF9] hover:text-[#376E7D]"
+                className="text-left px-3 py-2 rounded-lg hover:bg-[#F4FAFF] hover:text-[#174F6B]"
               >
                 Features
               </button>
               <button
                 onClick={() => handleNavClick('about')}
-                className="text-left px-3 py-2 rounded-lg hover:bg-[#F5FAF9] hover:text-[#376E7D]"
+                className="text-left px-3 py-2 rounded-lg hover:bg-[#F4FAFF] hover:text-[#174F6B]"
               >
                 About
               </button>
             </nav>
 
-            <div className="pt-3 border-t border-[#DCEBEA] flex flex-col gap-2">
+            <div className="pt-3 border-t border-[#DCEAF2] flex flex-col gap-2">
               {isAuthenticated && user ? (
-                <div className="space-y-2 bg-[#F5FAF9] p-3 rounded-2xl border border-[#DCEBEA]">
+                <div className="space-y-2 bg-[#F4FAFF] p-3 rounded-2xl border border-[#DCEAF2]">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#367BA8] text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-[#398FC4] text-white flex items-center justify-center font-bold text-xs">
                       {initial}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#376E7D]">
+                      <p className="text-xs font-bold text-[#174F6B]">
                         {displayName}
                       </p>
-                      <p className="text-[11px] text-[#5E8085] truncate font-mono">
+                      <p className="text-[11px] text-[#587482] truncate font-mono">
                         {user.email}
                       </p>
                     </div>
@@ -250,14 +250,14 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="pt-2 flex flex-col gap-1.5">
                     <button
                       onClick={() => handleLinkClick('/profile')}
-                      className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-white bg-[#367BA8] rounded-xl hover:bg-[#2e688e]"
+                      className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-white bg-[#398FC4] rounded-xl hover:bg-[#174F6B]"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>My Profile</span>
                     </button>
                     <button
                       onClick={handleSignOutClick}
-                      className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-[#5E8085] hover:text-rose-600 rounded-xl"
+                      className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-[#587482] hover:text-rose-600 rounded-xl"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out</span>
@@ -268,13 +268,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <button
                     onClick={() => handleLinkClick('/login')}
-                    className="w-full text-center py-2.5 px-4 text-xs font-semibold text-[#367BA8] bg-[#F5FAF9] border border-[#DCEBEA] rounded-xl"
+                    className="w-full text-center py-2.5 px-4 text-xs font-semibold text-[#398FC4] bg-[#F4FAFF] border border-[#DCEAF2] rounded-xl"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => handleLinkClick('/register')}
-                    className="w-full text-center py-2.5 px-4 text-xs font-semibold text-white bg-[#367BA8] rounded-xl"
+                    className="w-full text-center py-2.5 px-4 text-xs font-semibold text-white bg-[#398FC4] rounded-xl"
                   >
                     Register
                   </button>
