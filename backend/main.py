@@ -1,101 +1,56 @@
-
 import os
-import logging
-from contextlib import asynccontextmanager
-
+from sqlalchemy import inspect, text
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from database import Base, engine
 from profile_routes import router as profile_router
 
-# Import every model module before create_all so SQLAlchemy
-# knows about all registered tables.
-import models  # noqa: F401
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("edupath")
+# Creates missing tables. Existing deployments get a safe additive owner_id migration below.
+Base.metadata.create_all(bind=engine)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Initialize database tables when the application starts."""
-    try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables initialized successfully.")
-    except Exception:
-        logger.exception("Database initialization failed.")
-        raise
+def ensure_profile_owner_column() -> None:
+    """Add owner_id to existing installations without deleting existing profile data.
 
-    yield
+    Legacy rows remain owner_id=NULL and are deliberately not visible to authenticated users.
+    New and updated profiles are scoped to the authenticated Supabase user.
+    """
+    inspector = inspect(engine)
+    if "student_profiles" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("student_profiles")}
+    if "owner_id" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE student_profiles ADD COLUMN owner_id VARCHAR(64) NULL"))
+    with engine.begin() as connection:
+        # Index creation syntax is supported by SQLite and PostgreSQL.
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_student_profiles_owner_id ON student_profiles (owner_id)"))
 
 
-app = FastAPI(
-    title="EduPath AI API",
-    description="Student profiles and AI-powered education pathways.",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+ensure_profile_owner_column()
 
-# CORS configuration.
-# Set FRONTEND_URL in Render to your exact deployed frontend origin.
-frontend_url = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
-
-allowed_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
-if frontend_url:
-    allowed_origins.append(frontend_url)
-
-# Optional comma-separated additional origins, including Vercel previews.
-extra_origins = os.getenv("FRONTEND_ORIGINS", "")
-for origin in extra_origins.split(","):
-    origin = origin.strip().rstrip("/")
-    if origin and origin not in allowed_origins:
-        allowed_origins.append(origin)
-
+app = FastAPI(title="EduPath Student Profile API", version="1.1.0")
+origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+# Accept either variable name to support the current Render configuration and the older starter.
+for env_name in ("FRONTEND_URL", "FRONTEND_ORIGIN"):
+    configured = os.getenv(env_name, "")
+    for origin in configured.split(","):
+        origin = origin.strip().rstrip("/")
+        if origin and origin not in origins:
+            origins.append(origin)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "apikey"],
 )
-
+app.include_router(profile_router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {
-        "name": "EduPath AI API",
-        "status": "running",
-        "docs": "/docs",
-    }
-
+    return {"message": "EduPath Student Profile API"}
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-# Student profile CRUD endpoints:
-# POST   /api/profiles
-# GET    /api/profiles
-# GET    /api/profiles/{profile_id}
-# PUT    /api/profiles/{profile_id}
-# DELETE /api/profiles/{profile_id}
-app.include_router(profile_router, prefix="/api")
-
-
-# IMPORTANT:
-# Keep your existing Groq-powered pathways and scenario routes here.
-# If those routes are in another module, import and register that router.
-#
-# Example ONLY if your project already has these routers:
-# from pathway_routes import router as pathway_router
-# from scenario_routes import router as scenario_router
-# app.include_router(pathway_router, prefix="/api")
-# app.include_router(scenario_router, prefix="/api")
-#
-# Do not add these example imports unless those modules actually exist.

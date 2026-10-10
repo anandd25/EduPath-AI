@@ -1,68 +1,33 @@
-
 import os
-
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from sqlalchemy.engine import make_url
 
-# Load .env for local development.
-# On Render, DATABASE_URL is provided through Environment Variables.
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
+DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
+IS_PRODUCTION = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID") or os.getenv("ENVIRONMENT", "").lower() == "production")
 if not DATABASE_URL:
-    # SQLite is used only for local development.
-    if os.getenv("RENDER"):
-        raise RuntimeError(
-            "DATABASE_URL is missing. "
-            "Set it in Render Dashboard → Environment."
-        )
-
+    if IS_PRODUCTION:
+        raise RuntimeError("DATABASE_URL must be set to your Supabase PostgreSQL connection string in production.")
     DATABASE_URL = "sqlite:///./edupath.db"
 
-# Parse and normalize the URL.
-try:
-    db_url = make_url(DATABASE_URL)
-except Exception as exc:
-    raise RuntimeError(
-        "DATABASE_URL is invalid. Check your database connection string."
-    ) from exc
+# Supabase provides postgres:// or postgresql:// URLs; SQLAlchemy uses psycopg explicitly here.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len("postgres://"): ]
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len("postgresql://"): ]
 
-# Use the psycopg 3 driver for PostgreSQL URLs.
-if db_url.drivername == "postgresql":
-    db_url = db_url.set(drivername="postgresql+psycopg")
+if IS_PRODUCTION and DATABASE_URL.startswith("sqlite:"):
+    raise RuntimeError("Production cannot use edupath.db. Set DATABASE_URL to Supabase PostgreSQL in Render.")
 
-# SQLite needs this option for FastAPI's typical threaded request handling.
-connect_args = (
-    {"check_same_thread": False}
-    if db_url.drivername.startswith("sqlite")
-    else {}
-)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
-# Create the SQLAlchemy engine.
-engine = create_engine(
-    db_url,
-    connect_args=connect_args,
-    pool_pre_ping=True,
-)
-
-# Database session factory.
-SessionLocal = sessionmaker(
-    bind=engine,
-    autoflush=False,
-    autocommit=False,
-    expire_on_commit=False,
-)
-
-
-# Base class for SQLAlchemy models.
 class Base(DeclarativeBase):
     pass
 
-
-# FastAPI database dependency.
 def get_db():
     db = SessionLocal()
     try:
