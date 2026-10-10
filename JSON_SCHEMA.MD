@@ -412,3 +412,147 @@ project/
 ```
 
 Use `json-schema.md` for documentation, `student-profile.schema.json` for machine-readable JSON Schema validation, and a TypeScript interface or Pydantic model for application-level validation.
+
+---
+
+## 6. Graph Engine & Generation Schemas (Phase 1A & Phase 1B)
+
+The backend implements strict schemas for pathway graph representation, generation requests, and AI-generated candidate proposals in `backend/domain_schemas.py` and validates/ingests them via `backend/graph_engine.py`.
+
+### 6.1 Graph Representation Models
+
+#### `Node`
+Represents an ingested, permanent milestone or stage in a student's pathway graph.
+```json
+{
+  "node_id": "string (1-128 chars, unique)",
+  "node_type": "string (1-64 chars, e.g. 'education', 'career', 'certification')",
+  "title": "string (1-200 chars)",
+  "description": "string (1-4000 chars)",
+  "duration_estimate_months": "number | null (finite, >= 0)",
+  "cost_estimate": "number | null (finite, >= 0)",
+  "cost_currency": "string | null (ISO 4217 3-letter code, e.g. 'INR')",
+  "milestone_ids": ["string (reference id)"],
+  "institution_ids": ["string (reference id)"],
+  "evidence_ids": ["string (reference id)"],
+  "prerequisite_node_ids": ["string (node_id)"]
+}
+```
+- When `cost_estimate` is provided, `cost_currency` is required; `cost_currency` requires `cost_estimate`.
+
+#### `Edge`
+Represents a directed transition or dependency between permanent nodes.
+```json
+{
+  "edge_id": "string (1-128 chars, unique)",
+  "source_node_id": "string (existing node_id)",
+  "target_node_id": "string (existing node_id)",
+  "edge_type": "string (e.g. 'progression', 'alternative', 'conditional', 'dependency', 'prerequisite')",
+  "condition": "string | null (max 1000 chars, required for 'conditional', forbidden otherwise)"
+}
+```
+- **Condition Rule:** Whenever `edge_type` is `"conditional"` (case-insensitive), `condition` is required and must be a non-empty, non-whitespace string (e.g. `'Minimum 75% in Class 10 Science'`). For all other edge types, `condition` must be `null` / omitted.
+
+#### `PathwayGraph`
+The container representing a complete pathway graph.
+```json
+{
+  "pathway_id": "string (1-128 chars)",
+  "nodes": ["Node objects, max 500"],
+  "edges": ["Edge objects, max 1000"],
+  "target_outcome": "string | null (max 1000 chars)",
+  "schema_version": "string (defaults to '1.0')"
+}
+```
+
+---
+
+### 6.2 Generation Request Schema (`GraphGenerationRequest`)
+
+Submits student profile context and simulation parameters to the backend generator:
+```json
+{
+  "student_profile_snapshot": { "...": "StudentProfileCreate or StudentProfileOut object" },
+  "current_graph": "PathwayGraph | null",
+  "current_node_ids_to_expand": ["string (node_ids in current_graph, max 50)"],
+  "candidate_node_count": "integer (1 to 25)",
+  "generation_intent": "continue | explore_alternatives | recover_from_blocked_route"
+}
+```
+
+**Validation Rules:**
+1. Absence of `current_graph` (`null`) indicates **initial generation**. In this mode, `current_node_ids_to_expand` must be empty.
+2. Presence of `current_graph` indicates **pathway expansion**. It requires that:
+   - `current_graph` passes structural graph validation.
+   - `current_node_ids_to_expand` contains at least one node ID.
+   - All IDs in `current_node_ids_to_expand` exist within `current_graph.nodes` without duplicates.
+3. `candidate_node_count` specifies the exact number of candidate nodes expected from the proposal (1 to 25).
+
+---
+
+### 6.3 AI Candidate Proposal Contract (Phase 1B)
+
+The generator must return a strict object conforming to `CandidateProposal`:
+```json
+{
+  "candidate_nodes": [
+    {
+      "candidate_id": "string (1-128 chars, temporary key, unique per proposal)",
+      "node_type": "string (1-64 chars)",
+      "title": "string (1-200 chars)",
+      "description": "string (1-4000 chars)",
+      "duration_estimate_months": "number | null (finite, >= 0)",
+      "cost_estimate": "number | null (finite, >= 0)",
+      "cost_currency": "string | null (3-letter uppercase)",
+      "milestone_ids": [],
+      "institution_ids": [],
+      "evidence_ids": [],
+      "prerequisite_refs": [
+        {
+          "kind": "candidate",
+          "candidate_id": "string (temporary candidate_id)"
+        },
+        {
+          "kind": "existing_node",
+          "node_id": "string (permanent node_id in current_graph)"
+        }
+      ]
+    }
+  ],
+  "proposed_edges": [
+    {
+      "edge_key": "string (1-128 chars, temporary key, unique per proposal)",
+      "source": {
+        "kind": "existing_node | candidate",
+        "node_id": "string (when kind is existing_node)",
+        "candidate_id": "string (when kind is candidate)"
+      },
+      "target": {
+        "kind": "existing_node | candidate",
+        "node_id": "string (when kind is existing_node)",
+        "candidate_id": "string (when kind is candidate)"
+      },
+      "edge_type": "string (e.g. 'progression', 'alternative', 'conditional', 'dependency', 'prerequisite')",
+      "condition": "string | null (max 1000 chars, required for 'conditional', forbidden otherwise)"
+    }
+  ]
+}
+```
+
+#### Typed References (`NodeEndpointRef`)
+- Endpoints in `proposed_edges` and `prerequisite_refs` must explicitly specify `kind`:
+  - `kind: "existing_node"`: Requires `node_id` referencing a node in `current_graph`. `candidate_id` must be omitted.
+  - `kind: "candidate"`: Requires `candidate_id` referencing a sibling node in the proposal. `node_id` must be omitted.
+
+#### Validation & Safe Ingestion Rules (`apply_candidate_proposal`)
+1. **Exact Count:** `candidate_nodes` length must match `candidate_node_count` exactly.
+2. **Key Uniqueness:** All `candidate_id`s and `edge_key`s must be unique within the proposal.
+3. **Collision Prevention:** No `candidate_id` may collide with an existing `node_id` in `current_graph`.
+4. **Resolution:** Every `candidate_id` and `node_id` reference must resolve to a valid candidate in the proposal or an existing node in `current_graph`. Initial generation proposals cannot reference `existing_node`.
+5. **No Self-loops:** Neither edges nor prerequisite lists may connect a node to itself.
+6. **Expansion Connectivity:** For expansion requests, at least one proposed edge or candidate prerequisite must connect to a node listed in `current_node_ids_to_expand`. Multi-step branches originating from an expansion node are supported.
+7. **Unverified Metadata Rejection:** Until trusted reference catalogs are introduced, non-empty `milestone_ids`, `institution_ids`, or `evidence_ids` are rejected.
+8. **Permanent ID Allocation:** The backend allocates permanent UUIDs (`node_<uuid>`, `edge_<uuid>`, `pathway_<uuid>`) and rewrites temporary references. The AI never assigns permanent graph IDs.
+9. **Cycle Semantics:** Dependency and prerequisite relations must form a strict directed acyclic graph (DAG) evaluated via Kahn's algorithm. Progression and alternative edges may form cycles.
+10. **Atomicity & Immutability:** Any validation failure rejects the entire proposal without modifying `current_graph`. Partial updates are never applied.
+11. **Condition Rules:** `condition` is strictly required and must be a non-empty, non-whitespace string whenever `edge_type` is `conditional` (case-insensitive). For all other edge types, `condition` must be omitted (`null`).
