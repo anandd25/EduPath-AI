@@ -1,4 +1,3 @@
-    
 # EduPath — Student Profile JSON Schema
 
 ## 1. Overview
@@ -8,6 +7,7 @@ This schema defines the student profile collected by EduPath.
 The current scope is limited to students who are studying in Class 10, have completed Class 10, or are awaiting their Class 10 results.
 
 The profile contains:
+
 - Basic student information
 - Academic background and subjects
 - Interests and self-reported strengths
@@ -96,7 +96,7 @@ The `interest_description` field preserves the student's own words and must not 
 }
 ```
 
-The values above are illustrative. In particular, missing marks are represented by `null`, not zero.
+The values above are illustrative. Missing marks must be represented by `null`, not zero.
 
 ## 3. JSON Schema Definition
 
@@ -379,15 +379,17 @@ Save this definition separately as `student-profile.schema.json` if you want to 
 Implement these checks in your frontend and backend:
 
 1. `education_stage` must always be `class10`.
-2. Subject marks must not exceed the maximum marks when both values are available.
+2. Subject marks must not exceed maximum marks when both values are available.
 3. Missing marks must remain `null`; do not convert them to zero.
 4. If a strength rating is `null`, its status should be `not_sure`.
 5. If `budget_status` is `not_sure`, `amount` should be `null`.
 6. The `interest_description` field must preserve the student's original wording.
 7. Interest and priority selections must not contain duplicate values.
-8. The backend must validate incoming data before saving it.
+8. Marks, percentages, and budget values must be validated before saving.
+9. The backend must validate incoming data before saving it.
+10. AI-generated suggestions must not be presented as facts about the student.
 
-JSON Schema alone does not enforce every cross-field rule. Implement rules 2, 4, and 5 using additional validation logic in TypeScript or FastAPI.
+JSON Schema alone does not enforce every cross-field rule. Implement additional validation in TypeScript or FastAPI for rules 2, 4 and 5.
 
 ## 5. Suggested File Structure
 
@@ -407,8 +409,148 @@ project/
 │   ├── schemas/
 │   │   └── student_profile.py
 │   └── main.py
-└── docs/
-    └── json-schema.md
+├── docs/
+│   └── JSON_SCHEMA.md
+└── student-profile.schema.json
 ```
 
-Use `json-schema.md` for documentation, `student-profile.schema.json` for machine-readable JSON Schema validation, and a TypeScript interface or Pydantic model for application-level validation.
+Use `JSON_SCHEMA.md` for documentation, `student-profile.schema.json` for machine-readable JSON Schema validation, and TypeScript interfaces or Pydantic models for application-level validation.
+
+---
+
+## 6. Authentication and Account Schema
+
+EduPath includes Sign In and Register screens. Account data must remain separate from the Class 10 student profile defined above.
+
+**Important:** Adding frontend screens does not automatically implement authentication in FastAPI. The routes below are a proposed API contract only. Check the existing backend and `/docs` before connecting the frontend.
+
+### 6.1 Register Request
+
+Proposed endpoint: `POST /api/auth/register`
+
+Example request:
+
+```json
+{
+  "preferred_name": "Aarav",
+  "email": "aarav@example.com",
+  "password": "a-strong-password"
+}
+```
+
+Validation requirements:
+
+- `preferred_name`: required, trimmed string, 1–80 characters.
+- `email`: valid email address, normalized consistently, unique in the database.
+- `password`: required and validated by the backend against the password policy.
+- Do not accept client-supplied `user_id`, `role`, `is_admin`, `password_hash`, or authentication tokens.
+- Hash passwords using a recognised password-hashing algorithm.
+- Never store plaintext passwords.
+
+### 6.2 Sign In Request
+
+Proposed endpoint: `POST /api/auth/login`
+
+Example request:
+
+```json
+{
+  "email": "aarav@example.com",
+  "password": "a-strong-password"
+}
+```
+
+Requirements:
+
+- Validate the email format and require a non-empty password.
+- Return a generic authentication error for invalid credentials.
+- Use HTTPS in production.
+- Use the session or token mechanism implemented by the backend.
+- Do not store passwords or sensitive bearer tokens in `localStorage`.
+
+### 6.3 Safe Account Response
+
+A successful authentication response should contain only public account information.
+
+Example:
+
+```json
+{
+  "user": {
+    "id": 42,
+    "preferred_name": "Aarav",
+    "email": "aarav@example.com"
+  }
+}
+```
+
+This is illustrative. Adapt it to the actual backend implementation.
+
+Never return a password, password hash, session secret, or other private credential.
+
+For browser-based sessions, prefer secure HttpOnly cookies when supported by the application architecture. Configure cookie security, expiration, SameSite and CSRF protections appropriately.
+
+### 6.4 Proposed Authentication Endpoints
+
+| Purpose | Method | Proposed endpoint |
+|---|---|---|
+| Register | POST | `/api/auth/register` |
+| Sign in | POST | `/api/auth/login` |
+| Current account | GET | `/api/auth/me` |
+| Sign out | POST | `/api/auth/logout` |
+
+These endpoints are suggestions, not confirmation that the backend already supports them. Inspect the FastAPI application and its `/docs` page before using these paths.
+
+If authentication is not implemented, implement it securely in the backend before claiming that Sign In and Register work. Do not simulate authentication using a local-storage flag or fake success message.
+
+---
+
+## 7. Relationship Between Accounts and Student Profiles
+
+- Registration creates an account; it does not mean the student profile is complete.
+- The student profile remains the object defined in Sections 1–5.
+- Do not put passwords, password hashes, access tokens, refresh tokens, or session secrets into a student profile.
+- Do not add account fields to profile requests unless the actual backend schema requires them.
+- Associate each profile with the authenticated account on the server.
+- Do not trust a user ID supplied by the browser to establish profile ownership.
+- A student must not be able to read, update, or delete another student's profile by changing `profile_id`.
+- Restrict `GET /api/profiles` to authorised administrators or remove public listing if it is not required.
+- Preserve the existing `/api/pathways` and `/api/scenarios` endpoints when adding authentication.
+
+## 8. Frontend Environment Configuration
+
+The frontend API base URL is configured using `VITE_API_BASE`.
+
+### Local Development
+
+```env
+VITE_API_BASE=http://localhost:8000
+```
+
+### Production
+
+```env
+VITE_API_BASE=https://edupath-ai-backend-9van.onrender.com
+```
+
+Vite variables prefixed with `VITE_` are visible in the browser bundle. Only put non-secret configuration, such as the API base URL, in these variables.
+
+Never put API keys, database credentials, passwords, or other secrets in frontend environment variables.
+
+Keep real `.env` and `.env.local` files out of Git. Commit only safe example templates with placeholder values.
+
+## 9. Authentication and Profile Validation Checklist
+
+- [ ] Sign In and Register forms validate fields and show useful errors.
+- [ ] Authentication forms call real backend endpoints before showing success.
+- [ ] The backend hashes passwords and enforces unique email addresses.
+- [ ] No password or password hash is returned by the API.
+- [ ] Authentication failures do not disclose whether an email exists.
+- [ ] No fake login state is created using `localStorage`.
+- [ ] Student profile JSON remains separate from account credentials.
+- [ ] Profile endpoints enforce authentication and ownership where required.
+- [ ] Profile validation rules in Section 4 remain in force.
+- [ ] `GET /health`, `/api/profiles`, `/api/pathways` and `/api/scenarios` are checked against the running backend before frontend integration.
+- [ ] New authentication routes are documented in the backend API documentation.
+- [ ] The frontend build succeeds.
+- [ ] Real `.env` files and secrets are not committed to Git.
