@@ -176,15 +176,39 @@ export const apiService = {
   },
 
   /**
-   * AI Pathway Recommendations Stub (POST /api/pathways)
+   * Generate or expand a pathway graph (POST /api/pathways).
+   * The endpoint accepts the authenticated student's profile snapshot; it does
+   * not accept a profile_id-only payload. Keep graph values generic here so the
+   * UI can adapt to the backend's graph schema without silently discarding data.
    */
-  async getPathways(profileId: number): Promise<any> {
+  async getPathways(
+    studentProfileSnapshot: StudentProfileCreate | StudentProfileOut,
+    options: {
+      currentGraph?: Record<string, unknown> | null;
+      currentNodeIdsToExpand?: string[];
+      candidateNodeCount?: number;
+      generationIntent?: string;
+    } = {},
+  ): Promise<Record<string, unknown>> {
+    if (!currentAuthToken) {
+      throw {
+        message: 'Please sign in before generating your pathway.',
+        statusCode: 401,
+      } satisfies ApiError;
+    }
+
     const res = await fetch(`${API_BASE}/api/pathways`, {
       method: 'POST',
       headers: getRequestHeaders({
         'Content-Type': 'application/json',
       }),
-      body: JSON.stringify({ profile_id: profileId }),
+      body: JSON.stringify({
+        student_profile_snapshot: studentProfileSnapshot,
+        current_graph: options.currentGraph ?? null,
+        current_node_ids_to_expand: options.currentNodeIdsToExpand ?? [],
+        candidate_node_count: options.candidateNodeCount ?? 4,
+        generation_intent: options.generationIntent ?? 'initial',
+      }),
     });
 
     if (!res.ok) {

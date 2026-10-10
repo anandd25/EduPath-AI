@@ -6,8 +6,10 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const rawAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+
 
 // Check if variables are populated with actual non-placeholder values
 const isPlaceholderUrl =
