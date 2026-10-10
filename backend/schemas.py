@@ -1,137 +1,276 @@
+
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from typing import Any, Literal
 
-Interest = Literal["technology_coding","mathematics_logic","science_discovery","biology_healthcare","business_finance","creativity_design","social_sciences_communication","environment_sustainability","practical_technical_work","helping_people","sports_physical_activities","exploring_new_ideas","still_exploring"]
-StrengthName = Literal["logical_problem_solving","numerical_reasoning","creativity","communication","teamwork","attention_to_detail","practical_problem_solving","curiosity_independent_learning"]
-Priority = Literal["affordability","interest_in_subject","career_opportunities","stability","creativity","flexibility","social_impact"]
-ResultStatus = Literal["completed","predicted","awaited","unavailable"]
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
-class SubjectIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+
+EducationStage = Literal["class10"]
+AcademicStatus = Literal["studying", "completed", "awaiting_results"]
+ResultStatus = Literal["completed", "pending", "estimated", "not_applicable"]
+BudgetStatus = Literal["fixed", "flexible", "estimated", "unknown"]
+CareerCertainty = Literal["decided", "exploring", "undecided"]
+PreferredDestination = Literal["local", "national", "international", "flexible"]
+
+
+class APIModel(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        validate_assignment=True,
+    )
+
+
+class StudentSubjectCreate(APIModel):
     name: str = Field(min_length=1, max_length=100)
-    marks: float | None = Field(default=None, ge=0)
-    maximum_marks: float | None = Field(default=100, gt=0)
-    result_status: ResultStatus
-    favourite: bool
-    challenging: bool
+    marks: float | None = Field(default=None, ge=0, le=100000)
+    maximum_marks: float | None = Field(default=None, gt=0, le=100000)
+    result_status: ResultStatus = "pending"
+    favourite: bool = False
+    challenging: bool = False
+
     @model_validator(mode="after")
     def validate_marks(self):
-        if self.marks is not None and self.maximum_marks is not None and self.marks > self.maximum_marks:
-            raise ValueError("marks cannot exceed maximum_marks")
+        if self.marks is not None and self.maximum_marks is not None:
+            if self.marks > self.maximum_marks:
+                raise ValueError("Subject marks cannot exceed maximum marks")
         return self
 
-class StrengthIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    name: StrengthName
+
+class StudentStrengthCreate(APIModel):
+    name: str = Field(min_length=1, max_length=60)
     rating: int | None = Field(default=None, ge=1, le=5)
-    rating_status: Literal["rated", "not_sure"]
-    @model_validator(mode="after")
-    def validate_rating(self):
-        if self.rating is None and self.rating_status != "not_sure":
-            raise ValueError("null rating requires rating_status='not_sure'")
-        if self.rating is not None and self.rating_status != "rated":
-            raise ValueError("a rating requires rating_status='rated'")
-        return self
+    rating_status: ResultStatus = "estimated"
 
-class AnnualBudgetIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    currency: str = Field(pattern=r"^[A-Z]{3}$")
-    amount: float | None = Field(default=None, ge=0)
-    budget_status: Literal["estimated", "fixed", "not_sure"]
-    @model_validator(mode="after")
-    def validate_budget(self):
-        if self.budget_status == "not_sure" and self.amount is not None:
-            raise ValueError("amount must be null when budget_status='not_sure'")
-        return self
 
-class FundingPreferencesIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    interested_in_scholarships: bool
-    willing_to_consider_loans: bool
+class AnnualBudget(APIModel):
+    currency: str = Field(default="INR", min_length=3, max_length=3)
+    amount: float | None = Field(default=None, ge=0, le=1000000000)
+    budget_status: BudgetStatus = "unknown"
 
-class StudentProfileCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    education_stage: Literal["class10"] = "class10"
+    @field_validator("currency")
+    @classmethod
+    def uppercase_currency(cls, value: str) -> str:
+        return value.upper()
+
+
+class FundingPreferences(APIModel):
+    interested_in_scholarships: bool = True
+    willing_to_consider_loans: bool = False
+
+
+class StudentProfileCreate(APIModel):
+    education_stage: EducationStage = "class10"
     preferred_name: str | None = Field(default=None, max_length=80)
     country: str = Field(min_length=1, max_length=100)
     region: str | None = Field(default=None, max_length=100)
-    curriculum: Literal["CBSE","ICSE","State Board","Other"]
-    academic_status: Literal["currently_studying","completed","awaiting_results"]
-    preferred_language: str | None = Field(default=None, max_length=50)
-    subjects: list[SubjectIn]
+    curriculum: str = Field(min_length=1, max_length=30)
+    academic_status: AcademicStatus
+    preferred_language: str = Field(default="English", max_length=50)
+
     overall_percentage: float | None = Field(default=None, ge=0, le=100)
-    overall_result_status: ResultStatus
-    interests: list[Interest]
-    strengths: list[StrengthIn]
-    interest_description: str = Field(max_length=1000)
-    annual_budget: AnnualBudgetIn
-    funding_preferences: FundingPreferencesIn
-    preferred_destination: Literal["india","abroad","both","undecided"]
-    priorities: list[Priority]
-    career_certainty: Literal["specific_career","few_ideas","exploring"]
+    overall_result_status: ResultStatus = "pending"
+
+    subjects: list[StudentSubjectCreate] = Field(default_factory=list, max_length=40)
+    interests: list[str] = Field(default_factory=list, max_length=30)
+    strengths: list[StudentStrengthCreate] = Field(default_factory=list, max_length=30)
+    priorities: list[str] = Field(default_factory=list, max_length=20)
+    interest_description: str = Field(default="", max_length=5000)
+
+    annual_budget: AnnualBudget = Field(default_factory=AnnualBudget)
+    funding_preferences: FundingPreferences = Field(
+        default_factory=FundingPreferences
+    )
+
+    preferred_destination: PreferredDestination = "flexible"
+    career_certainty: CareerCertainty = "exploring"
 
     @field_validator("interests", "priorities")
     @classmethod
-    def unique_values(cls, values):
-        if len(values) != len(set(values)):
-            raise ValueError("duplicate values are not allowed")
+    def normalize_unique_strings(cls, values: list[str]) -> list[str]:
+        result: list[str] = []
+        seen: set[str] = set()
+
+        for item in values:
+            normalized = item.strip()
+            key = normalized.casefold()
+
+            if not normalized:
+                continue
+            if len(normalized) > 60:
+                raise ValueError("Each item must be at most 60 characters")
+            if key not in seen:
+                seen.add(key)
+                result.append(normalized)
+
+        return result
+
+    @field_validator("subjects")
+    @classmethod
+    def unique_subjects(
+        cls,
+        values: list[StudentSubjectCreate],
+    ) -> list[StudentSubjectCreate]:
+        seen: set[str] = set()
+        for subject in values:
+            key = subject.name.casefold()
+            if key in seen:
+                raise ValueError(f"Duplicate subject: {subject.name}")
+            seen.add(key)
         return values
 
-    @model_validator(mode="after")
-    def unique_nested_names(self):
-        subjects = [s.name.strip().casefold() for s in self.subjects]
-        strengths = [s.name for s in self.strengths]
-        if len(subjects) != len(set(subjects)):
-            raise ValueError("subject names must be unique")
-        if len(strengths) != len(set(strengths)):
-            raise ValueError("strength names must be unique")
-        return self
+    @field_validator("strengths")
+    @classmethod
+    def unique_strengths(
+        cls,
+        values: list[StudentStrengthCreate],
+    ) -> list[StudentStrengthCreate]:
+        seen: set[str] = set()
+        for strength in values:
+            key = strength.name.casefold()
+            if key in seen:
+                raise ValueError(f"Duplicate strength: {strength.name}")
+            seen.add(key)
+        return values
 
-class SubjectOut(SubjectIn):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
 
-class StrengthOut(StrengthIn):
+class StudentSubjectOut(StudentSubjectCreate):
     id: int
-    model_config = ConfigDict(from_attributes=True)
 
-class StudentProfileOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+
+class StudentStrengthOut(StudentStrengthCreate):
     id: int
-    education_stage: str
-    preferred_name: str | None
+
+
+class AnnualBudgetOut(AnnualBudget):
+    pass
+
+
+class FundingPreferencesOut(FundingPreferences):
+    pass
+
+
+class StudentProfileOut(APIModel):
+    id: int
+    owner_id: str | None = None
+
+    education_stage: EducationStage
+    preferred_name: str | None = None
     country: str
-    region: str | None
+    region: str | None = None
     curriculum: str
-    academic_status: str
-    preferred_language: str | None
-    subjects: list[SubjectOut]
-    overall_percentage: float | None
-    overall_result_status: str
-    interests: list[str]
-    strengths: list[StrengthOut]
-    interest_description: str
-    annual_budget: dict
-    funding_preferences: dict
-    preferred_destination: str
-    priorities: list[str]
-    career_certainty: str
-    created_at: datetime
-    updated_at: datetime
+    academic_status: AcademicStatus
+    preferred_language: str
+
+    overall_percentage: float | None = None
+    overall_result_status: ResultStatus
+
+    subjects: list[StudentSubjectOut] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    strengths: list[StudentStrengthOut] = Field(default_factory=list)
+    priorities: list[str] = Field(default_factory=list)
+    interest_description: str = ""
+
+    annual_budget: AnnualBudgetOut
+    funding_preferences: FundingPreferencesOut
+
+    preferred_destination: PreferredDestination
+    career_certainty: CareerCertainty
+
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     @classmethod
-    def from_profile(cls, p):
+    def from_profile(cls, profile: Any) -> "StudentProfileOut":
+        """Convert SQLAlchemy profile relationships to the public API shape."""
+        subjects = [
+            {
+                "id": item.id,
+                "name": item.name,
+                "marks": item.marks,
+                "maximum_marks": item.maximum_marks,
+                "result_status": item.result_status,
+                "favourite": item.favourite,
+                "challenging": item.challenging,
+            }
+            for item in profile.subjects
+        ]
+
+        interests = [item.value for item in profile.interests]
+
+        strengths = [
+            {
+                "id": item.id,
+                "name": item.name,
+                "rating": item.rating,
+                "rating_status": item.rating_status,
+            }
+            for item in profile.strengths
+        ]
+
+        priorities = [item.value for item in profile.priorities]
+
         return cls(
-            id=p.id, education_stage=p.education_stage, preferred_name=p.preferred_name,
-            country=p.country, region=p.region, curriculum=p.curriculum,
-            academic_status=p.academic_status, preferred_language=p.preferred_language,
-            subjects=p.subjects, overall_percentage=p.overall_percentage,
-            overall_result_status=p.overall_result_status, interests=[x.value for x in p.interests],
-            strengths=p.strengths, interest_description=p.interest_description,
-            annual_budget={"currency":p.budget_currency,"amount":p.budget_amount,"budget_status":p.budget_status},
-            funding_preferences={"interested_in_scholarships":p.interested_in_scholarships,
-                                 "willing_to_consider_loans":p.willing_to_consider_loans},
-            preferred_destination=p.preferred_destination, priorities=[x.value for x in p.priorities],
-            career_certainty=p.career_certainty, created_at=p.created_at, updated_at=p.updated_at
+            id=profile.id,
+            owner_id=profile.owner_id,
+            education_stage=profile.education_stage,
+            preferred_name=profile.preferred_name,
+            country=profile.country,
+            region=profile.region,
+            curriculum=profile.curriculum,
+            academic_status=profile.academic_status,
+            preferred_language=profile.preferred_language or "English",
+            overall_percentage=profile.overall_percentage,
+            overall_result_status=profile.overall_result_status,
+            subjects=subjects,
+            interests=interests,
+            strengths=strengths,
+            priorities=priorities,
+            interest_description=profile.interest_description or "",
+            annual_budget={
+                "currency": profile.budget_currency,
+                "amount": profile.budget_amount,
+                "budget_status": profile.budget_status,
+            },
+            funding_preferences={
+                "interested_in_scholarships": profile.interested_in_scholarships,
+                "willing_to_consider_loans": profile.willing_to_consider_loans,
+            },
+            preferred_destination=profile.preferred_destination,
+            career_certainty=profile.career_certainty,
+            created_at=profile.created_at,
+            updated_at=profile.updated_at,
         )
+
+
+class ProfileSummary(APIModel):
+    profile_id: int
+    preferred_name: str | None = None
+    education_stage: EducationStage
+    country: str
+    region: str | None = None
+    interests: list[str] = Field(default_factory=list)
+    priorities: list[str] = Field(default_factory=list)
+    career_certainty: CareerCertainty
+
+
+class APIMessage(APIModel):
+    message: str
+
+
+class ErrorResponse(APIModel):
+    detail: str
+
+
+class HealthResponse(APIModel):
+    status: Literal["ok", "degraded"]
+    service: str
+    details: dict[str, Any] = Field(default_factory=dict)
