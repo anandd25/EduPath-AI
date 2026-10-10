@@ -162,7 +162,7 @@ const [researchError, setResearchError] = useState('');
         <span className="text-[#5E8085] text-[11px] hidden sm:inline">Select a node to explore</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.8fr)] gap-5">
+      <div className="grid grid-cols-1 gap-6">
         <section className="min-w-0">
           <button onClick={() => setSelectedId('class10')} className={`w-full flex items-center gap-3 text-left p-4 rounded-2xl border transition ${selected.id === 'class10' ? 'bg-[#C9E6F8]/60 border-[#367BA8]' : 'bg-[#F5FAF9] border-[#DCEBEA] hover:border-[#367BA8]'}`}>
             <span className="w-11 h-11 rounded-xl bg-[#367BA8] text-white flex items-center justify-center font-bold shrink-0">10</span>
