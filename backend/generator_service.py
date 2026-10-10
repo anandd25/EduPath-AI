@@ -148,16 +148,25 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
     if not api_key:
         return "Live research unavailable: TAVILY_API_KEY is not configured. Do not claim facts are verified."
 
+    
     profile = request.student_profile_snapshot
+    if hasattr(profile, "model_dump"):
+        profile = profile.model_dump()
+    elif not isinstance(profile, dict):
+        profile = {}
+
     interests = profile.get("interests") or []
-    interest_description = profile.get("interest_description", "")
+    interest_description = profile.get("interest_description") or ""
     region = profile.get("region") or ""
+
     country = profile.get("country") or "India"
 
+    
     topics = [
-        f"official Class 10 education pathways and eligibility {country}",
-        f"official exams colleges courses fees scholarships {region} {country}",
+        f"site:gov.in OR site:ac.in official Class 10 education pathways eligibility {country}",
+        f"official exams colleges courses fees scholarships {region} {country} government institution",
     ]
+
 
     interest_terms = ", ".join(str(x) for x in interests[:4])
     if interest_terms or interest_description:
