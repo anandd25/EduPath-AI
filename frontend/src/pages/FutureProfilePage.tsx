@@ -11,7 +11,6 @@ import {
   BUDGET_STATUS_LABELS 
 } from '../data/wizardOptions';
 import { InterestIcon } from '../components/wizard/InterestIcon';
-import { BudgetRoadmap } from '../components/BudgetRoadmap';
 import { 
   BookOpen, 
   Sparkles, 
@@ -418,10 +417,7 @@ export const FutureProfilePage: React.FC<FutureProfileProps> = ({
           </div>
         </section>
 
-        {/* 6. Interactive budget-first roadmap */}
-        <BudgetRoadmap profile={profile} />
-
-        {/* 7. Next Step */}
+        {/* 6. Next Step */}
         <section className="bg-white border border-[#DCEBEA] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-4 print-clean">
           <div className="flex items-center gap-2 text-[#367BA8] text-xs font-bold uppercase tracking-wider">
             <Sparkles className="w-4 h-4 text-[#278F89]" />
