@@ -1,6 +1,6 @@
 /**
  * Supabase Client Initialization
- * Configured via SUPABASE_URL and SUPABASE_ANON_KEY (or VITE_-prefixed equivalents).
+ * Configured via environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
  * Never exposes service-role keys.
  */
 
@@ -26,7 +26,7 @@ export const isSupabaseConfigured: boolean = !isPlaceholderUrl && !isPlaceholder
 
 export const supabaseConfigurationError: string | null = isSupabaseConfigured
   ? null
-  : 'Supabase credentials are not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY in your deployment environment to connect real Supabase Auth.';
+  : 'Supabase credentials are not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment to connect real Supabase Auth.';
 
 // If configured, use the provided credentials. Otherwise, initialize a dummy client so the application never crashes on load.
 const effectiveUrl = isSupabaseConfigured ? rawUrl : 'https://placeholder.supabase.co';
