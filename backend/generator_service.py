@@ -644,3 +644,234 @@ def generate_pathway_graph(
         raise GraphValidationError(
             [f"generated pathway graph validation failed: {exc}"]
         ) from exc
+
+
+def generate_personalized_pathways_with_groq(
+    profile: dict[str, Any],
+    currency: str = "INR",
+) -> tuple[Any, list[Any]] | None:
+    """Use Groq LLM to synthesize fresh, personalized multi-pathway career architectures.
+
+    Returns (PathwayGraph, list[PathwayRoute]) if Groq succeeds, or None if unavailable/failed.
+    """
+    import logging
+    import uuid
+    from domain_schemas import Edge, Node, PathwayGraph, PathwayRoute, StagedPayment
+
+    logger = logging.getLogger(__name__)
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        from groq import Groq
+
+        client = Groq(api_key=api_key)
+    except Exception as exc:
+        logger.warning("Groq client initialization failed: %s", exc)
+        return None
+
+    resolved_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    name = profile.get("preferred_name") or "Student"
+    interests = profile.get("interests") or []
+    interest_desc = profile.get("interest_description") or ""
+    overall_pct = profile.get("overall_percentage") or 75
+    subjects = profile.get("subjects") or []
+    budget = (profile.get("annual_budget") or {}).get("amount", 150000)
+
+    prompt = (
+        f"You are the EduPath AI Education-to-Career Planning Engine.\n"
+        f"Synthesize 3 realistic, personalized, comparative pathways for this Class 10 student:\n"
+        f"- Name: {name}\n"
+        f"- Overall Class 10 Score: {overall_pct}%\n"
+        f"- Stated Interests: {', '.join(interests)}\n"
+        f"- Free-form Goals/Description: {interest_desc}\n"
+        f"- Subjects: {json.dumps(subjects)}\n"
+        f"- Annual Family Budget: {currency} {budget}\n\n"
+        f"Design 3 distinct, practical pathways starting from Class 10:\n"
+        f"- Path A: Professional / University Degree Route\n"
+        f"- Path B: Applied Diploma / Polytechnic Route\n"
+        f"- Path C: Vocational & Skills Route\n\n"
+        f"Tailor the subject matter directly to the student's stated interests.\n"
+        f"Output MUST be a single valid JSON object conforming to this schema:\n"
+        f'{{\n'
+        f'  "discipline_title": "string",\n'
+        f'  "ranking_explanations": ["string"],\n'
+        f'  "route_a": {{\n'
+        f'    "name": "string", "category": "University Degree", "summary": "string",\n'
+        f'    "total_duration_months": 84, "total_cost": 450000,\n'
+        f'    "nodes": [\n'
+        f'      {{\n'
+        f'        "title": "string", "description": "string", "node_type": "education",\n'
+        f'        "duration_estimate_months": 24, "cost_estimate": 100000,\n'
+        f'        "purpose_fit": "string", "required_subjects": ["string"],\n'
+        f'        "min_grade_or_score": "string", "entrance_exams": ["string"],\n'
+        f'        "actionable_fallback": "string"\n'
+        f'      }}\n'
+        f'    ],\n'
+        f'    "potential_outcomes": ["string"], "risks": ["string"], "fallback_route": "string"\n'
+        f'  }},\n'
+        f'  "route_b": {{ ... same keys as route_a ... }},\n'
+        f'  "route_c": {{ ... same keys as route_a ... }}\n'
+        f'}}\n'
+        f"Return ONLY valid JSON."
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model=resolved_model,
+            messages=[
+                {"role": "system", "content": "You are a professional educational planning engine. Output only JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+        )
+        content = response.choices[0].message.content
+        if not content:
+            return None
+        data = json.loads(content)
+    except Exception as exc:
+        logger.warning("Groq pathway generation failed, using procedural domain generator: %s", exc)
+        return None
+
+    # Construct PathwayGraph and PathwayRoute objects from Groq data
+    try:
+        nodes: list[Node] = []
+        edges: list[Edge] = []
+        routes: list[PathwayRoute] = []
+
+        root_id = "root_class10"
+        root_node = Node(
+            node_id=root_id,
+            node_type="exploration",
+            title=f"Class 10 Graduation ({data.get('discipline_title', 'Core Career Foundations')})",
+            description=f"Personalized starting milestone for {name}. Tailored to interests in {', '.join(interests[:3]) or 'academic discovery'}.",
+            duration_estimate_months=1,
+            cost_estimate=2000,
+            cost_currency=currency,
+            purpose_fit=f"Validates eligibility for {name} with Class 10 score of {overall_pct}%.",
+            pathway_id="root",
+            feasibility_status="FEASIBLE",
+            required_subjects=["Mathematics", "Science", "English"],
+            actionable_fallback="State supplementary examination or open schooling.",
+        )
+        nodes.append(root_node)
+
+        route_keys = [("route_a", "path_a_entrance"), ("route_b", "path_b_diploma"), ("route_c", "path_c_vocational")]
+        for r_key, p_id in route_keys:
+            r_data = data.get(r_key)
+            if not r_data or not isinstance(r_data, dict):
+                continue
+
+            r_nodes_raw = r_data.get("nodes") or []
+            r_node_ids: list[str] = [root_id]
+            prev_node_id = root_id
+
+            for idx, n_raw in enumerate(r_nodes_raw[:4]):
+                n_id = f"node_{p_id}_{idx + 1}_{uuid.uuid4().hex[:4]}"
+                r_node_ids.append(n_id)
+
+                node_obj = Node(
+                    node_id=n_id,
+                    node_type=n_raw.get("node_type", "education" if idx < 2 else "career"),
+                    title=str(n_raw.get("title") or f"Stage {idx + 1}"),
+                    description=str(n_raw.get("description") or "Educational milestone."),
+                    duration_estimate_months=int(n_raw.get("duration_estimate_months") or 24),
+                    cost_estimate=float(n_raw.get("cost_estimate") or 50000),
+                    cost_currency=currency,
+                    pathway_id=p_id,
+                    feasibility_status="FEASIBLE",
+                    purpose_fit=str(n_raw.get("purpose_fit") or f"Tailored to {name}'s goals."),
+                    required_subjects=n_raw.get("required_subjects") or ["Core Subjects"],
+                    min_grade_or_score=str(n_raw.get("min_grade_or_score") or "Pass with 55%"),
+                    entrance_exams=n_raw.get("entrance_exams") or [],
+                    actionable_fallback=str(n_raw.get("actionable_fallback") or "Alternative state institution."),
+                    staged_payments=[
+                        StagedPayment(
+                            stage_name=f"{n_raw.get('title', 'Stage')} Tuition",
+                            amount=float(n_raw.get("cost_estimate") or 50000),
+                            currency=currency,
+                            due_date="2026-08-01",
+                        )
+                    ],
+                )
+                nodes.append(node_obj)
+
+                # Connect edge
+                edge_id = f"edge_{prev_node_id}_{n_id}"
+                edges.append(
+                    Edge(
+                        edge_id=edge_id,
+                        source_node_id=prev_node_id,
+                        target_node_id=n_id,
+                        edge_type="progression" if prev_node_id != root_id else "alternative",
+                    )
+                )
+                prev_node_id = n_id
+
+            # Route object
+            route_obj = PathwayRoute(
+                pathway_id=p_id,
+                route_name=str(r_data.get("name") or p_id),
+                category=str(r_data.get("category") or "Academic"),
+                summary=str(r_data.get("summary") or "Custom pathway."),
+                total_duration_months=int(r_data.get("total_duration_months") or 60),
+                total_cost=float(r_data.get("total_cost") or 200000),
+                currency=currency,
+                staged_payments=[],
+                available_funding=["State Merit Concession", "Institutional Scholarships"],
+                net_cost_after_aid=float(r_data.get("total_cost") or 200000) * 0.85,
+                entry_requirements=r_data.get("entry_requirements") or ["Pass Class 10"],
+                potential_outcomes=r_data.get("potential_outcomes") or ["Career Qualification"],
+                risks=r_data.get("risks") or ["Competitive selection"],
+                fallback_route=str(r_data.get("fallback_route") or "Alternative vocational track"),
+                is_academically_eligible=True,
+                is_cash_flow_feasible=True,
+                feasibility_status="FEASIBLE",
+                feasibility_reasons=[f"Synthesized by Groq AI specifically for {name} ({', '.join(interests[:2])})."],
+                ranking_score=90 if p_id == "path_b_diploma" else (85 if p_id == "path_a_entrance" else 80),
+                node_ids=r_node_ids,
+            )
+            routes.append(route_obj)
+
+        if len(routes) < 2:
+            return None
+
+        # Build PathwayGraph
+        graph = PathwayGraph(
+            pathway_id="groq_personalized_plan",
+            nodes=nodes,
+            edges=edges,
+            target_outcome=data.get("discipline_title", "Personalized Career Pathway"),
+            schema_version="2.0.0",
+            pathway_routes=routes,
+            ranking_explanations=data.get("ranking_explanations") or [
+                f"Personalized with Groq AI for {name} based on reported strengths in {', '.join(interests[:3])}."
+            ],
+            comparison_matrix={
+                "routes": [
+                    {
+                        "pathway_id": r.pathway_id,
+                        "name": r.route_name,
+                        "category": r.category,
+                        "duration_years": round(r.total_duration_months / 12, 1),
+                        "total_cost": r.total_cost,
+                        "net_cost": r.net_cost_after_aid,
+                        "currency": r.currency,
+                        "feasibility_status": r.feasibility_status,
+                        "entry_requirements": r.entry_requirements,
+                        "potential_outcomes": r.potential_outcomes,
+                        "risks": r.risks,
+                        "fallback_route": r.fallback_route,
+                        "staged_payments_count": len(r.staged_payments),
+                    }
+                    for r in routes
+                ],
+                "summary": f"Tailored comparison matrix for {name}.",
+            },
+        )
+        return graph, routes
+    except Exception as exc:
+        logger.warning("Error transforming Groq response to graph: %s", exc)
+        return None

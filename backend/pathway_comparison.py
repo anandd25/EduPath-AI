@@ -40,6 +40,15 @@ def build_complete_pathways(
     currency: str = "INR",
 ) -> tuple[PathwayGraph, list[PathwayRoute]]:
     """Generate multi-route comparison pathways with rich decision-support nodes."""
+    # 1. Attempt Groq LLM dynamic pathway generation if configured
+    try:
+        from generator_service import generate_personalized_pathways_with_groq
+        groq_result = generate_personalized_pathways_with_groq(profile, currency=currency)
+        if groq_result is not None:
+            return groq_result
+    except Exception:
+        pass
+
     preferred_name = profile.get("preferred_name") or "Student"
     country = profile.get("country") or "India"
     region = profile.get("region") or "Maharashtra"
@@ -150,6 +159,28 @@ def build_complete_pathways(
         route_a_subjs = ["Accountancy", "Business Studies", "Economics", "Mathematics"]
         route_b_subjs = ["English", "Mathematics", "Business Basics"]
         route_c_subjs = ["Basic Arithmetic", "Computer Fundamentals"]
+
+        node_a1_title = "Class 11–12 Commerce Stream & Foundation Preparation"
+        node_a1_desc = f"Two-year commerce foundation for {preferred_name} focusing on Accountancy, Economics, and Business Studies with CA/CS Foundation prep."
+        node_a2_title = "Bachelor of Commerce (B.Com) / CA Intermediate Route"
+        node_a2_desc = "3-4 year university degree in Commerce, Finance, or dual enrolment with ICAI Chartered Accountancy articleship."
+        node_a3_title = "Chartered Accountant / Corporate Financial Analyst"
+        node_a3_desc = f"Corporate advisory, taxation auditing, equity research, or banking executive role tailored to {preferred_name}."
+
+        node_b1_title = "Diploma in Commercial Practice & Accounting (3 Years)"
+        node_b1_desc = "Direct post-Class 10 polytechnic diploma covering financial management, taxation software, and corporate office administration."
+        node_b2_title = "Lateral Entry B.Com / Corporate Accounting Placement"
+        node_b2_desc = "Direct lateral entry to university 2nd year Commerce or immediate commercial accounting supervisor placement."
+        node_b3_title = "Certified Financial Executive / Account Manager"
+        node_b3_desc = "Mid-level corporate accounting, payroll leadership, or regional banking operations."
+
+        node_c1_title = "Vocational Certification in FinTech & Digital Banking (1-2 Years)"
+        node_c1_desc = "Practical skill training in banking interfaces, GST filings, computerized auditing, and financial operations."
+        node_c2_title = "Banking & Financial Services Apprenticeship (1 Year)"
+        node_c2_desc = "On-the-job apprenticeship with NBFCs, cooperative banks, or fintech service centers under NAPS."
+        node_c3_title = "Certified Financial Associate / Bank Branch Operations Specialist"
+        node_c3_desc = "Permanent employment in client wealth desk, retail loan processing, or microfinance administration."
+
     elif is_medical:
         # MEDICAL / HEALTHCARE TRACK
         route_a_name = "Path A · Senior Secondary Science (PCB) & Medical Entrance Route"
@@ -158,6 +189,28 @@ def build_complete_pathways(
         route_a_subjs = ["Physics", "Chemistry", "Biology"]
         route_b_subjs = ["Science", "English"]
         route_c_subjs = ["Basic Science", "General Fitness"]
+
+        node_a1_title = "Class 11–12 Science (PCB) & Pre-Medical Preparation"
+        node_a1_desc = f"Rigorous two-year senior secondary program focusing on Physics, Chemistry, and Biology combined with NEET-UG coaching for {preferred_name}."
+        node_a2_title = "Bachelor of Medicine / Pharmacy (MBBS / BDS / B.Pharm)"
+        node_a2_desc = "Professional undergraduate medical or pharmaceutical degree with clinical hospital rotations and laboratory sciences."
+        node_a3_title = "Registered Clinical Practitioner / Healthcare Specialist"
+        node_a3_desc = f"Direct patient care, hospital residency, or pharmaceutical research position aligned with {preferred_name}'s clinical interests."
+
+        node_b1_title = "Diploma in Medical Laboratory Technology (DMLT / 3 Years)"
+        node_b1_desc = "Practical post-10th polytechnic healthcare diploma covering pathology, hematology, radiography, and diagnostic lab equipment."
+        node_b2_title = "Lateral Entry B.Sc. Medical Lab Technology / Hospital Placement"
+        node_b2_desc = "Direct admission into Year 2 of Allied Health Sciences degree or immediate appointment as diagnostic lab supervisor."
+        node_b3_title = "Senior Diagnostic Technologist / Clinical Operations Lead"
+        node_b3_desc = "Supervisory role in hospital pathology laboratories, diagnostic chains, or clinical research centers."
+
+        node_c1_title = "Vocational Emergency Medical Technician (EMT) Certification"
+        node_c1_desc = "Hands-on paramedic and emergency first-responder training directly after Class 10 with certified life support modules."
+        node_c2_title = "Hospital Clinical Rotations & Emergency Apprenticeship"
+        node_c2_desc = "Stipend-backed 1-year clinical training in emergency casualty wings and ambulance services."
+        node_c3_title = "Certified Emergency Medical Specialist / Healthcare Paramedic"
+        node_c3_desc = "Essential healthcare responder in ambulance services, trauma centers, or primary health network."
+
     elif is_arts:
         # ARTS / DESIGN / HUMANITIES TRACK
         route_a_name = "Path A · Senior Secondary Humanities & University Degree (BA / Law / Design)"
@@ -166,6 +219,28 @@ def build_complete_pathways(
         route_a_subjs = ["English", "History", "Political Science", "Psychology"]
         route_b_subjs = ["Drawing & Visual Arts", "English"]
         route_c_subjs = ["Basic Computer Skills", "Communication"]
+
+        node_a1_title = "Class 11–12 Humanities & Creative Portfolio Preparation"
+        node_a1_desc = f"Two-year senior secondary program covering social sciences, literature, or visual arts, with entrance exam preparation for {preferred_name}."
+        node_a2_title = "Bachelor of Design / Arts / Integrated Law (B.Des / BA-LLB)"
+        node_a2_desc = "Undergraduate professional education covering visual design, legal argumentation, or social science research with industry studios."
+        node_a3_title = "Creative Director / Legal Counsel / Policy Analyst"
+        node_a3_desc = f"Specialized professional career in design studios, legal chambers, publishing houses, or public advocacy for {preferred_name}."
+
+        node_b1_title = "Diploma in Visual Design & Animation (3 Years)"
+        node_b1_desc = "Direct post-10th applied polytechnic diploma covering digital illustration, 3D modeling, UI basics, and visual communication."
+        node_b2_title = "Lateral Entry B.Des Degree / Studio Design Placement"
+        node_b2_desc = "Direct lateral entry into 2nd year design university or employment as junior visual designer."
+        node_b3_title = "Senior Visual Designer / Digital Media Lead"
+        node_b3_desc = "Creative leadership role in digital agencies, gaming studios, or media enterprises."
+
+        node_c1_title = "Vocational Digital Media Production Certification (1-2 Years)"
+        node_c1_desc = "Intensive hands-on training in video editing, photography, sound recording, and digital content tools."
+        node_c2_title = "Media Studio Apprenticeship & Production Internship"
+        node_c2_desc = "Practical studio apprenticeship under the National Apprenticeship Promotion Scheme (NAPS)."
+        node_c3_title = "Independent Creative Producer / Studio Specialist"
+        node_c3_desc = "Skilled practitioner in advertising agencies, broadcasting houses, or independent studio production."
+
     else:
         # DEFAULT / ENGINEERING TRACK (Core canonical example)
         route_a_name = "Path A · Engineering Entrance Route (Class 11–12 PCM → Degree)"
@@ -174,6 +249,27 @@ def build_complete_pathways(
         route_a_subjs = ["Physics", "Chemistry", "Mathematics"]
         route_b_subjs = ["Mathematics", "Science"]
         route_c_subjs = ["Class 10 Passing Subjects", "Practical Aptitude"]
+
+        node_a1_title = "Class 11–12 Academic Stream & Entrance Preparation"
+        node_a1_desc = f"Two-year rigorous foundation focusing on {', '.join(route_a_subjs[:3])}. Combines higher secondary board syllabus with entrance coaching."
+        node_a2_title = "Bachelor of Technology (B.Tech / B.E.) Degree"
+        node_a2_desc = "4-year university undergraduate degree in Engineering / Technical Specialization with lab practicums and capstone projects."
+        node_a3_title = "Graduate Professional Engineer / Technical Specialist"
+        node_a3_desc = f"Full-time technical employment in engineering design, software development, or industrial operations tailored to {preferred_name}."
+
+        node_b1_title = "3-Year Polytechnic Diploma in Applied Engineering"
+        node_b1_desc = "Applied 3-year technical diploma directly after Class 10. Emphasizes workshop practice, lab engineering, and hands-on technical skills."
+        node_b2_title = "Lateral Entry B.Tech (Direct 2nd Year) OR Technical Employment"
+        node_b2_desc = "Direct lateral entry to Year 2 of B.Tech through lateral entry (LEET) or direct appointment as Junior Engineer."
+        node_b3_title = "Industrial Engineer / Technical Operations Lead"
+        node_b3_desc = "Supervisory or engineering lead role overseeing manufacturing, quality engineering, or maintenance operations."
+
+        node_c1_title = "ITI Technical Trade Qualification (2 Years)"
+        node_c1_desc = "Vocational engineering trade qualification in CNC machining, electrician, or mechanical maintenance."
+        node_c2_title = "Dual System of Training (DST) / Industrial Apprenticeship (1 Year)"
+        node_c2_desc = "Factory-floor apprenticeship with stipend under NAPS and National Council for Vocational Training."
+        node_c3_title = "Master Craftsperson / Skilled Industrial Specialist"
+        node_c3_desc = "Senior certified technician or industrial specialist in automated plants, power facilities, or manufacturing units."
 
     # =========================================================================
     # PATH A: SENIOR SECONDARY + DEGREE ROUTE
@@ -214,11 +310,8 @@ def build_complete_pathways(
         Node(
             node_id=pA_node1_id,
             node_type="education",
-            title="Class 11–12 Academic Stream & Entrance Preparation",
-            description=(
-                f"Two-year rigorous foundation focusing on {', '.join(route_a_subjs[:3])}. "
-                f"Combines higher secondary board syllabus with entrance examination coaching (e.g. JEE Main, State CET)."
-            ),
+            title=node_a1_title,
+            description=node_a1_desc,
             duration_estimate_months=24,
             cost_estimate=140000,
             cost_currency=currency,
@@ -267,11 +360,8 @@ def build_complete_pathways(
         Node(
             node_id=pA_node2_id,
             node_type="education",
-            title="Bachelor of Technology (B.Tech / B.E.) Degree",
-            description=(
-                "4-year university undergraduate degree in Engineering / Technical Specialization. "
-                "Covers core curriculum, lab practicums, industry internships, and capstone projects."
-            ),
+            title=node_a2_title,
+            description=node_a2_desc,
             duration_estimate_months=48,
             cost_estimate=480000,
             cost_currency=currency,
@@ -320,11 +410,8 @@ def build_complete_pathways(
         Node(
             node_id=pA_node3_id,
             node_type="career",
-            title="Graduate Professional Engineer / Technical Specialist",
-            description=(
-                "Full-time technical employment in engineering design, software development, or industrial operations. "
-                "Typical campus placement or graduate recruitment pipeline."
-            ),
+            title=node_a3_title,
+            description=node_a3_desc,
             duration_estimate_months=24,
             cost_estimate=0,
             cost_currency=currency,
@@ -386,11 +473,8 @@ def build_complete_pathways(
         Node(
             node_id=pB_node1_id,
             node_type="education",
-            title="3-Year Polytechnic Diploma in Applied Engineering",
-            description=(
-                "Applied 3-year technical diploma directly after Class 10. Emphasizes workshop practice, "
-                "laboratory engineering, applied mathematics, and hands-on technical skills."
-            ),
+            title=node_b1_title,
+            description=node_b1_desc,
             duration_estimate_months=36,
             cost_estimate=105000,
             cost_currency=currency,
@@ -433,11 +517,8 @@ def build_complete_pathways(
         Node(
             node_id=pB_node2_id,
             node_type="education",
-            title="Lateral Entry B.Tech (Direct 2nd Year) OR Technical Employment",
-            description=(
-                "Flexible junction point: Diploma graduates can either join industry as Junior Engineers "
-                "or enter Year 2 of B.Tech through lateral entry (LEET) quota, completing the degree in 3 years."
-            ),
+            title=node_b2_title,
+            description=node_b2_desc,
             duration_estimate_months=36,
             cost_estimate=270000,
             cost_currency=currency,
@@ -469,11 +550,8 @@ def build_complete_pathways(
         Node(
             node_id=pB_node3_id,
             node_type="career",
-            title="Field / Junior Engineer to Project Engineer",
-            description=(
-                "Strong technical trajectory combining hands-on diploma craftsmanship with engineering theoretical skills. "
-                "Highly favored in plant operations, site engineering, and automation industries."
-            ),
+            title=node_b3_title,
+            description=node_b3_desc,
             duration_estimate_months=24,
             cost_estimate=0,
             cost_currency=currency,
@@ -528,11 +606,8 @@ def build_complete_pathways(
         Node(
             node_id=pC_node1_id,
             node_type="certification",
-            title="Industrial Training Institute (ITI) / National Skills Qualification",
-            description=(
-                "Intensive 1-2 year technical or vocational trade qualification (e.g. Electrician, Fitter, Mechatronics, "
-                "Computer Operator & Programming Assistant). Highly subsidized tuition with direct workshop mastery."
-            ),
+            title=node_c1_title,
+            description=node_c1_desc,
             duration_estimate_months=24,
             cost_estimate=25000,
             cost_currency=currency,
@@ -574,11 +649,8 @@ def build_complete_pathways(
         Node(
             node_id=pC_node2_id,
             node_type="exploration",
-            title="National Apprenticeship Scheme (NATS / NAPS) & On-The-Job Training",
-            description=(
-                "1-year paid industry apprenticeship with monthly stipend (₹8,000–₹12,000/mo). "
-                "Converts academic technical qualification into real factory and site operating experience."
-            ),
+            title=node_c2_title,
+            description=node_c2_desc,
             duration_estimate_months=12,
             cost_estimate=0,
             cost_currency=currency,
@@ -601,11 +673,8 @@ def build_complete_pathways(
         Node(
             node_id=pC_node3_id,
             node_type="career",
-            title="Certified Skilled Technician / Self-Employed Technical Contractor",
-            description=(
-                "Reliable, high-demand skilled employment across railways, public utilities, manufacturing plants, "
-                "or independent technical entrepreneurship. Option to pursue lateral diploma while working."
-            ),
+            title=node_c3_title,
+            description=node_c3_desc,
             duration_estimate_months=24,
             cost_estimate=0,
             cost_currency=currency,
@@ -694,12 +763,19 @@ def build_complete_pathways(
         ),
     }
 
+    target_track_name = (
+        "Healthcare & Medicine" if is_medical else
+        ("Commerce, Corporate Finance & CA" if is_commerce else
+        ("Visual Design, Humanities & Law" if is_arts else
+        "Engineering, Technology & Applied Sciences"))
+    )
+
     graph = PathwayGraph(
         pathway_id=f"comparison-graph-{profile.get('id', 'student')}",
         nodes=nodes,
         edges=edges,
         target_outcome=(
-            f"Personalized multi-pathway decision support for {preferred_name}. "
+            f"Personalized {target_track_name} decision support for {preferred_name}. "
             "Compare timeline, staged cash-flow feasibility, prerequisites, evidence, and actionable fallbacks."
         ),
         schema_version="2.0",

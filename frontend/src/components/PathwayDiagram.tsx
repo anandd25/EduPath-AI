@@ -40,12 +40,14 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { DecisionNode, PathwayGraphData, PathwayRoute, PreferenceComparisonResponse, ScenarioSimulationResponse } from '../types/pathway';
+import { StudentProfileCreate, StudentProfileOut } from '../types/studentProfile';
 import { apiService } from '../services/apiService';
 import { clientPathwayService } from '../services/clientPathwayService';
 import { NodeDetailModal } from './NodeDetailModal';
 import { PathwayComparisonMatrix } from './PathwayComparisonMatrix';
 import { PreferenceLearningModal } from './PreferenceLearningModal';
 import { ScenarioSimulationWidget } from './ScenarioSimulationWidget';
+import { AIGenerationModal } from './AIGenerationModal';
 
 // Custom Node for React Flow Diagram
 interface CustomNodeData {
@@ -160,6 +162,7 @@ export function PathwayCanvas({
   const [selectedNode, setSelectedNode] = useState<DecisionNode | null>(null);
   const [isPreferenceModalOpen, setIsPreferenceModalOpen] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
+  const [isAIGeneratingModalOpen, setIsAIGeneratingModalOpen] = useState(false);
 
   // Baseline fallback profile if not logged in
   const fallbackProfile: StudentProfileCreate = useMemo(
@@ -190,6 +193,7 @@ export function PathwayCanvas({
   );
 
   const activeProfile = studentProfile || fallbackProfile;
+  const disciplineTitle = useMemo(() => clientPathwayService.getDisciplineTitle(activeProfile), [activeProfile]);
 
   // Immediate deterministic baseline ensures roadmap is instantly running
   const baseline = useMemo(() => clientPathwayService.generatePathways(activeProfile), [activeProfile]);
@@ -385,6 +389,16 @@ export function PathwayCanvas({
             </button>
           </div>
 
+          {/* Groq AI Synthesize Trigger */}
+          <button
+            onClick={() => setIsAIGeneratingModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            title="Synthesize personalized roadmap with Groq AI"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
+            <span className="hidden lg:inline">Groq AI Synthesize</span>
+          </button>
+
           {/* Preference Learning Trigger */}
           <button
             onClick={() => setIsPreferenceModalOpen(true)}
@@ -410,6 +424,35 @@ export function PathwayCanvas({
           </button>
         </div>
       </header>
+
+      {/* Profile Context Banner */}
+      <div className="bg-gradient-to-r from-[#F0F7F6] via-[#EDF8F5] to-[#E9F4F8] border-b border-[#DCEBEA] px-4 py-2 flex items-center justify-between text-xs text-[#376E7D] shrink-0">
+        <div className="flex items-center gap-2 overflow-x-auto min-w-0">
+          <span className="inline-flex items-center gap-1.5 font-bold text-[#1E3A4C] bg-white px-2.5 py-1 rounded-md border border-[#DCEBEA] shadow-2xs shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            AI Tailored for: <span className="text-[#367BA8]">{activeProfile.preferred_name || 'Student'}</span>
+          </span>
+          <span className="hidden sm:inline-block text-[#5E8085]">·</span>
+          <span className="text-[#5E8085] truncate font-medium">
+            Focus: <strong className="text-[#1E3A4C]">{disciplineTitle}</strong>
+          </span>
+          <span className="hidden sm:inline-block text-[#5E8085]">·</span>
+          <span className="text-[#5E8085] shrink-0">
+            Class 10: <strong className="text-[#278F89]">{activeProfile.overall_percentage || 80}%</strong>
+          </span>
+          <span className="hidden md:inline-block text-[#5E8085]">·</span>
+          <span className="text-[#5E8085] shrink-0 hidden md:inline">
+            Budget: <strong className="text-[#1E3A4C]">₹{activeProfile.annual_budget?.amount?.toLocaleString('en-IN') || '1,50,000'}/yr</strong>
+          </span>
+        </div>
+        <button
+          onClick={() => setIsAIGeneratingModalOpen(true)}
+          className="text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0 ml-2 cursor-pointer transition-colors"
+        >
+          <span>Regenerate with Groq</span>
+          <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
 
       {/* Main Body */}
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -534,6 +577,17 @@ export function PathwayCanvas({
         routes={routes}
         studentProfile={activeProfile}
         onPreferencesUpdated={handlePreferencesUpdated}
+      />
+
+      {/* Groq AI Live Telemetry Modal */}
+      <AIGenerationModal
+        isOpen={isAIGeneratingModalOpen}
+        onClose={() => {
+          setIsAIGeneratingModalOpen(false);
+          loadPathways();
+        }}
+        studentProfile={activeProfile}
+        disciplineTitle={disciplineTitle}
       />
     </div>
   );
