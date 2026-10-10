@@ -13,7 +13,7 @@ import {
   Sparkles,
   Lock
 } from 'lucide-react';
-import { PathwayDiagram } from '../components/PathwayDiagram';
+import { HeroPathwayPreview } from '../components/HeroPathwayPreview';
 
 interface LandingPageProps {
   onStartJourney: () => void;
@@ -58,9 +58,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Explore your interests, understand your strengths and discover the possibilities beyond Class 10.
               </p>
 
-              {/* Action Buttons & Authentication Requirement */}
-              <div className="pt-1 flex flex-col items-stretch sm:items-start gap-2.5">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              {/* Action Buttons & Navigation */}
+              <div className="pt-1 flex flex-col items-stretch sm:items-start gap-3">
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                   {isAuthenticated ? (
                     <button
                       type="button"
@@ -75,22 +75,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   ) : (
                     <button
                       type="button"
-                      disabled
-                      aria-disabled="true"
-                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-[#5E8085] bg-[#DCEBEA]/90 border border-[#DCEBEA] rounded-xl shadow-none cursor-not-allowed select-none opacity-85"
-                      title="Sign in or create an account to begin your journey"
+                      onClick={() => onNavigate('/login')}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white bg-[#367BA8] hover:bg-[#2e688e] active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer group"
                     >
                       <span>Start My Journey</span>
-                      <ArrowRight className="w-4 h-4 text-[#5E8085]/70" />
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   )}
 
                   <button
                     type="button"
-                    onClick={() => scrollToSection('how-it-works')}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold text-[#367BA8] bg-white hover:bg-[#C9E6F8]/30 border border-[#DCEBEA] rounded-xl transition-all cursor-pointer shadow-2xs"
+                    onClick={() => onNavigate('/pathways')}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-bold text-[#376E7D] bg-white hover:bg-[#C9E6F8]/30 border border-[#DCEBEA] rounded-xl transition-all cursor-pointer shadow-2xs"
                   >
-                    <span>See How It Works</span>
+                    <Layers className="w-4 h-4 text-[#367BA8]" />
+                    <span>Explore Pathways</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('how-it-works')}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm font-medium text-[#5E8085] hover:text-[#376E7D] transition-colors cursor-pointer"
+                  >
+                    <span>How It Works</span>
                   </button>
                 </div>
 
@@ -99,7 +106,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="flex items-center gap-2 text-xs text-[#5E8085] bg-[#EAF4FF] px-3.5 py-2 rounded-xl border border-[#D8EAFE] max-w-md animate-in fade-in">
                     <Lock className="w-3.5 h-3.5 text-[#367BA8] shrink-0" />
                     <span>
-                      Sign in or create an account to begin your journey.{' '}
+                      Sign in or create an account to save your profile.{' '}
                       <button
                         type="button"
                         onClick={() => onNavigate('/login')}
@@ -120,34 +127,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 )}
               </div>
 
-              {/* Three Small Icon-and-Text Highlights */}
-              <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-[#DCEBEA] text-xs text-[#5E8085]">
-                <div className="flex items-center gap-2">
+              {/* Three Small Icon-and-Text Highlights - Responsive Flex Wrap */}
+              <div className="pt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[#DCEBEA] text-xs text-[#5E8085]">
+                <div className="flex items-center gap-2 shrink-0">
                   <UserCheck className="w-4 h-4 text-[#367BA8] shrink-0" />
                   <span>Personalised guidance</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Route className="w-4 h-4 text-[#278F89] shrink-0" />
-                  <span>Multiple education paths</span>
+                  <span>3 Complete routes</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <GraduationCap className="w-4 h-4 text-[#367BA8] shrink-0" />
-                  <span>Built for your future</span>
+                  <span>Built for Class 10</span>
                 </div>
               </div>
 
               {/* Reassurance Message */}
-              <div className="flex items-start gap-2 text-xs text-[#5E8085] bg-white p-3 rounded-xl border border-[#DCEBEA] shadow-2xs">
+              <div className="flex items-start gap-2.5 text-xs text-[#5E8085] bg-white p-3.5 rounded-xl border border-[#DCEBEA] shadow-2xs">
                 <HeartHandshake className="w-4 h-4 text-[#278F89] shrink-0 mt-0.5" />
-                <span className="leading-normal">
+                <span className="leading-relaxed">
                   You don't need to have everything figured out yet. Start with what you know about yourself.
                 </span>
               </div>
             </div>
 
-            {/* Right Column: Interactive Pathway Diagram Preview */}
-            <div className="lg:col-span-6 w-full">
-              <PathwayDiagram isEmbedded={true} />
+            {/* Right Column: Sleek Hero Pathway Preview Showcase */}
+            <div className="lg:col-span-6 w-full flex items-center justify-center">
+              <HeroPathwayPreview
+                onExploreClick={() => onNavigate('/pathways')}
+                onCompareClick={() => onNavigate('/pathways')}
+              />
             </div>
           </div>
         </div>

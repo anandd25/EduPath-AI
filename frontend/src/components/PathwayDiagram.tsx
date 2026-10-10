@@ -40,8 +40,8 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { DecisionNode, PathwayGraphData, PathwayRoute, PreferenceComparisonResponse, ScenarioSimulationResponse } from '../types/pathway';
-import { StudentProfileCreate, StudentProfileOut } from '../types/studentProfile';
 import { apiService } from '../services/apiService';
+import { clientPathwayService } from '../services/clientPathwayService';
 import { NodeDetailModal } from './NodeDetailModal';
 import { PathwayComparisonMatrix } from './PathwayComparisonMatrix';
 import { PreferenceLearningModal } from './PreferenceLearningModal';
@@ -63,64 +63,79 @@ function DecisionNodeComponent({ data }: NodeProps<Node<CustomNodeData>>) {
   return (
     <div
       onClick={() => data.onSelect(node)}
-      className={`min-w-[220px] max-w-[260px] rounded-2xl border-2 bg-white shadow-sm transition-all cursor-pointer p-3.5 space-y-2 ${
-        data.selected ? 'ring-3 ring-[#367BA8]/30 shadow-md' : 'hover:border-[#367BA8]'
+      className={`w-[270px] rounded-2xl border-2 bg-white shadow-sm transition-all cursor-pointer p-3.5 space-y-2.5 ${
+        data.selected ? 'ring-3 ring-[#367BA8]/40 border-[#367BA8] shadow-md' : 'hover:border-[#367BA8]'
       } ${
-        isBlocked ? 'border-red-300 bg-red-50/20' : isConditional ? 'border-amber-300' : 'border-[#DCEBEA]'
+        isBlocked ? 'border-red-300 bg-red-50/20' : isConditional ? 'border-amber-300 bg-amber-50/10' : 'border-[#DCEBEA]'
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-[#A7D9E6] !border-white" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!w-3 !h-3 !bg-[#367BA8] !border-2 !border-white !-top-1.5"
+      />
 
       {/* Top Tag & Status */}
       <div className="flex items-center justify-between gap-1 text-[10px]">
         <span
-          className="px-2 py-0.5 rounded font-bold uppercase tracking-wider text-white"
+          className="px-2 py-0.5 rounded-md font-bold uppercase tracking-wider text-white shrink-0"
           style={{ backgroundColor: data.accent }}
         >
           {node.node_type}
         </span>
 
         {isBlocked ? (
-          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold flex items-center gap-0.5">
+          <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 font-bold flex items-center gap-1 shrink-0">
             <AlertTriangle className="w-2.5 h-2.5" />
             <span>BLOCKED</span>
           </span>
         ) : isConditional ? (
-          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold flex items-center gap-0.5">
+          <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold flex items-center gap-1 shrink-0">
             <HelpCircle className="w-2.5 h-2.5" />
             <span>CONDITIONAL</span>
           </span>
         ) : (
-          <span className="px-1.5 py-0.5 rounded bg-[#CDEDE2] text-[#278F89] font-bold flex items-center gap-0.5">
+          <span className="px-2 py-0.5 rounded-md bg-[#CDEDE2] text-[#278F89] font-bold flex items-center gap-1 shrink-0">
             <CheckCircle2 className="w-2.5 h-2.5" />
             <span>FEASIBLE</span>
           </span>
         )}
       </div>
 
-      {/* Title */}
+      {/* Title & Description */}
       <div>
-        <h4 className="text-xs font-bold text-[#376E7D] leading-snug line-clamp-2">
+        <h4 className="text-xs font-bold text-[#1E3A4C] leading-snug break-words">
           {node.title}
         </h4>
-        <p className="text-[10px] text-[#5E8085] line-clamp-1 mt-0.5">
+        <p className="text-[11px] text-[#5E8085] leading-relaxed line-clamp-2 mt-1">
           {node.description}
         </p>
       </div>
 
+      {/* Requirement Snippet */}
+      {node.min_grade_or_score && (
+        <div className="text-[10px] text-[#278F89] bg-[#EDF8F5] px-2 py-1 rounded-md font-medium truncate border border-[#CDEDE2]/60">
+          Req: {node.min_grade_or_score}
+        </div>
+      )}
+
       {/* Quick Chips */}
-      <div className="pt-1.5 border-t border-[#DCEBEA] flex items-center justify-between text-[10px] text-[#5E8085]">
-        <span className="flex items-center gap-1">
+      <div className="pt-2 border-t border-[#DCEBEA] flex items-center justify-between text-[10px] text-[#5E8085]">
+        <span className="flex items-center gap-1 shrink-0">
           <Clock className="w-3 h-3 text-[#367BA8]" />
-          <span>{node.duration_estimate_months ? `${node.duration_estimate_months}m` : 'Flexible'}</span>
+          <span>{node.duration_estimate_months ? `${node.duration_estimate_months} mos` : 'Flexible'}</span>
         </span>
 
-        <span className="font-bold text-[#376E7D]">
-          {node.cost_estimate ? `${node.cost_currency || '₹'} ${node.cost_estimate.toLocaleString('en-IN')}` : 'Low Cost'}
+        <span className="font-bold text-[#1E3A4C] truncate ml-2">
+          {node.cost_estimate ? `${node.cost_currency || '₹'} ${node.cost_estimate.toLocaleString('en-IN')}` : 'Stipend / Free'}
         </span>
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="!bg-[#A7D9E6] !border-white" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!w-3 !h-3 !bg-[#367BA8] !border-2 !border-white !-bottom-1.5"
+      />
     </div>
   );
 }
@@ -145,12 +160,6 @@ export function PathwayCanvas({
   const [selectedNode, setSelectedNode] = useState<DecisionNode | null>(null);
   const [isPreferenceModalOpen, setIsPreferenceModalOpen] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
-
-  const [graphData, setGraphData] = useState<PathwayGraphData | null>(null);
-  const [routes, setRoutes] = useState<PathwayRoute[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
 
   // Baseline fallback profile if not logged in
   const fallbackProfile: StudentProfileCreate = useMemo(
@@ -182,9 +191,17 @@ export function PathwayCanvas({
 
   const activeProfile = studentProfile || fallbackProfile;
 
+  // Immediate deterministic baseline ensures roadmap is instantly running
+  const baseline = useMemo(() => clientPathwayService.generatePathways(activeProfile), [activeProfile]);
+
+  const [graphData, setGraphData] = useState<PathwayGraphData>(() => baseline.graph);
+  const [routes, setRoutes] = useState<PathwayRoute[]>(() => baseline.routes);
+  const [loading, setLoading] = useState(false);
+
+  const { fitView, zoomIn, zoomOut } = useReactFlow();
+
   // Load complete pathways from backend
   const loadPathways = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await apiService.getPathways(activeProfile, { candidateNodeCount: 12 });
       if (res.graph) {
@@ -193,9 +210,10 @@ export function PathwayCanvas({
         setRoutes(graph.pathway_routes || (res.pathway_routes as PathwayRoute[]) || []);
       }
     } catch (err) {
-      console.error('Failed to fetch pathways, using offline fallback', err);
-    } finally {
-      setLoading(false);
+      console.warn('Using client pathway decision engine:', err);
+      const fallback = clientPathwayService.generatePathways(activeProfile);
+      setGraphData(fallback.graph);
+      setRoutes(fallback.routes);
     }
   }, [activeProfile]);
 
@@ -226,18 +244,29 @@ export function PathwayCanvas({
       path_c_vocational: 2,
     };
 
-    const levelCounts: Record<string, number> = {};
-
     const flowNodes: Node<CustomNodeData>[] = filteredNodes.map((n) => {
       const pId = n.pathway_id || 'root';
       const col = pathCols[pId] ?? 1;
 
-      // Group rows
+      // Group rows strictly by sequence
       let row = 0;
-      if (pId === 'root') row = 0;
-      else if (n.title.toLowerCase().includes('class 11') || n.title.toLowerCase().includes('3-year') || n.title.toLowerCase().includes('iti')) row = 1;
-      else if (n.title.toLowerCase().includes('b.tech') || n.title.toLowerCase().includes('lateral') || n.title.toLowerCase().includes('apprenticeship')) row = 2;
-      else row = 3;
+      if (pId === 'root' || n.node_id === 'root_class10') {
+        row = 0;
+      } else if (n.node_id === 'node_a1_prep' || n.node_id === 'node_b1_diploma' || n.node_id === 'node_c1_vocational') {
+        row = 1;
+      } else if (n.node_id === 'node_a2_entrance' || n.node_id === 'node_c2_apprenticeship') {
+        row = 2;
+      } else if (n.node_id === 'node_a3_degree' || n.node_id === 'node_b2_lateral') {
+        row = 3;
+      } else if (n.node_id === 'node_a4_career' || n.node_id === 'node_b3_career' || n.node_id === 'node_c3_career') {
+        row = 4;
+      } else {
+        if (n.node_type === 'exploration') row = 0;
+        else if (n.title.toLowerCase().includes('class 11') || n.title.toLowerCase().includes('3-year') || n.title.toLowerCase().includes('iti')) row = 1;
+        else if (n.title.toLowerCase().includes('entrance') || n.title.toLowerCase().includes('apprentice')) row = 2;
+        else if (n.title.toLowerCase().includes('degree') || n.title.toLowerCase().includes('b.tech') || n.title.toLowerCase().includes('lateral')) row = 3;
+        else row = 4;
+      }
 
       const accent =
         pId === 'path_a_entrance' ? '#367BA8' : pId === 'path_b_diploma' ? '#278F89' : pId === 'path_c_vocational' ? '#D97706' : '#376E7D';
@@ -245,7 +274,7 @@ export function PathwayCanvas({
       return {
         id: n.node_id,
         type: 'decision',
-        position: { x: col * 300 + 40, y: row * 180 + 30 },
+        position: { x: col * 350 + 50, y: row * 220 + 30 },
         data: {
           node: n,
           selected: selectedNode?.node_id === n.node_id,
@@ -389,13 +418,13 @@ export function PathwayCanvas({
           {viewMode === 'diagram' ? (
             <>
               {/* Filter Sub-bar */}
-              <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2 bg-white/95 backdrop-blur-xs p-2 rounded-2xl border border-[#DCEBEA] shadow-xs text-xs">
-                <span className="text-[#5E8085] flex items-center gap-1 pl-1 font-semibold">
+              <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-xs p-1.5 sm:p-2 rounded-2xl border border-[#DCEBEA] shadow-xs text-xs max-w-[95vw] overflow-x-auto">
+                <span className="text-[#5E8085] flex items-center gap-1 pl-1 font-semibold shrink-0">
                   <Filter className="w-3 h-3" /> Filter:
                 </span>
                 <button
                   onClick={() => setFilterPathwayId('all')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
                     filterPathwayId === 'all' ? 'bg-[#367BA8] text-white font-bold' : 'hover:bg-[#F5FAF9] text-[#5E8085]'
                   }`}
                 >
