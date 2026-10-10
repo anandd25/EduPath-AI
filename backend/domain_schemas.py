@@ -1,6 +1,6 @@
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator, model_validator
 
 from schemas import StudentProfileCreate, StudentProfileOut
 
@@ -11,6 +11,12 @@ MAX_PROPOSED_EDGES = 50
 MAX_EXPANSION_NODE_IDS = 50
 ReferenceId = Annotated[str, Field(min_length=1, max_length=128)]
 
+NodeType = Literal["education", "career", "exploration", "certification"]
+EdgeType = Literal["progression", "alternative", "conditional", "dependency", "prerequisite"]
+
+VALID_NODE_TYPES = frozenset({"education", "career", "exploration", "certification"})
+VALID_EDGE_TYPES = frozenset({"progression", "alternative", "conditional", "dependency", "prerequisite"})
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -18,7 +24,7 @@ class StrictModel(BaseModel):
 
 class Node(StrictModel):
     node_id: str = Field(min_length=1, max_length=128)
-    node_type: str = Field(min_length=1, max_length=64)
+    node_type: NodeType
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1, max_length=4000)
     duration_estimate_months: FiniteFloat | None = Field(default=None, ge=0)
@@ -28,6 +34,13 @@ class Node(StrictModel):
     institution_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     prerequisite_node_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
+
+    @field_validator("node_type", mode="before")
+    @classmethod
+    def normalize_node_type(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().casefold()
+        return value
 
     @model_validator(mode="after")
     def validate_cost_currency(self):
@@ -42,12 +55,19 @@ class Edge(StrictModel):
     edge_id: str = Field(min_length=1, max_length=128)
     source_node_id: str = Field(min_length=1, max_length=128)
     target_node_id: str = Field(min_length=1, max_length=128)
-    edge_type: str = Field(min_length=1, max_length=64)
+    edge_type: EdgeType
     condition: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("edge_type", mode="before")
+    @classmethod
+    def normalize_edge_type(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().casefold()
+        return value
 
     @model_validator(mode="after")
     def validate_condition(self):
-        if self.edge_type.casefold() == "conditional":
+        if self.edge_type == "conditional":
             if self.condition is None or not self.condition.strip():
                 raise ValueError("condition must be a non-empty string when edge_type is 'conditional'")
         else:
@@ -127,7 +147,7 @@ CandidatePrerequisiteRef = NodeEndpointRef
 
 class CandidateNode(StrictModel):
     candidate_id: str = Field(min_length=1, max_length=128)
-    node_type: str = Field(min_length=1, max_length=64)
+    node_type: NodeType
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1, max_length=4000)
     duration_estimate_months: FiniteFloat | None = Field(default=None, ge=0)
@@ -137,6 +157,13 @@ class CandidateNode(StrictModel):
     institution_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     prerequisite_refs: list[NodeEndpointRef] = Field(default_factory=list, max_length=100)
+
+    @field_validator("node_type", mode="before")
+    @classmethod
+    def normalize_node_type(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().casefold()
+        return value
 
     @model_validator(mode="after")
     def validate_cost_currency(self):
@@ -161,12 +188,19 @@ class ProposedEdge(StrictModel):
     edge_key: str = Field(min_length=1, max_length=128)
     source: NodeEndpointRef
     target: NodeEndpointRef
-    edge_type: str = Field(min_length=1, max_length=64)
+    edge_type: EdgeType
     condition: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("edge_type", mode="before")
+    @classmethod
+    def normalize_edge_type(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().casefold()
+        return value
 
     @model_validator(mode="after")
     def validate_condition(self):
-        if self.edge_type.casefold() == "conditional":
+        if self.edge_type == "conditional":
             if self.condition is None or not self.condition.strip():
                 raise ValueError("condition must be a non-empty string when edge_type is 'conditional'")
         else:

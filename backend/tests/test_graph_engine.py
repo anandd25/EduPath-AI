@@ -367,6 +367,7 @@ class CandidateProposalIngestionTests(unittest.TestCase):
             "e1",
             source=NodeEndpointRef.candidate("cand-1"),
             target=NodeEndpointRef.candidate("cand-2"),
+            edge_type="prerequisite",
         )
         proposal = make_proposal([c1, c2], [edge])
 
@@ -473,6 +474,10 @@ class CandidateProposalIngestionTests(unittest.TestCase):
         self.assertEqual(len(result.nodes), 2)
         new_node = [n for n in result.nodes if n.node_id != "foundation"][0]
         self.assertEqual(new_node.prerequisite_node_ids, ["foundation"])
+        self.assertEqual(len(result.edges), 1)
+        self.assertEqual(result.edges[0].edge_type, "prerequisite")
+        self.assertEqual(result.edges[0].source_node_id, "foundation")
+        self.assertEqual(result.edges[0].target_node_id, new_node.node_id)
 
     def test_expansion_requires_at_least_one_connection_to_expansion_nodes(self):
         existing = make_graph([make_node("start"), make_node("other")], [])
@@ -734,7 +739,7 @@ class ConditionalEdgeValidationTests(unittest.TestCase):
                 )
 
     def test_permanent_non_conditional_edge_with_condition_rejected(self):
-        for non_cond_type in ("progression", "alternative", "dependency", "prerequisite", "custom"):
+        for non_cond_type in ("progression", "alternative", "dependency", "prerequisite"):
             with self.subTest(edge_type=non_cond_type), self.assertRaisesRegex(
                 ValidationError, "condition is only allowed when edge_type is 'conditional'"
             ):
@@ -821,6 +826,345 @@ class ConditionalEdgeValidationTests(unittest.TestCase):
         self.assertEqual(len(result.edges), 1)
         self.assertEqual(result.edges[0].edge_type, "conditional")
         self.assertEqual(result.edges[0].condition, "Must achieve 80% in mathematics")
+
+
+class ControlledVocabularyTests(unittest.TestCase):
+    def test_node_types_accept_canonical_and_case_insensitive_normalized(self):
+        for raw, expected in (
+            ("education", "education"),
+            ("Education", "education"),
+            ("CAREER", "career"),
+            ("Exploration", "exploration"),
+            ("certification", "certification"),
+            ("  CERTIFICATION  ", "certification"),
+        ):
+            with self.subTest(raw=raw):
+                node = Node(
+                    node_id="n1",
+                    node_type=raw,
+                    title="Title",
+                    description="Desc",
+                )
+                self.assertEqual(node.node_type, expected)
+
+                cand = CandidateNode(
+                    candidate_id="c1",
+                    node_type=raw,
+                    title="Title",
+                    description="Desc",
+                )
+                self.assertEqual(cand.node_type, expected)
+
+    def test_node_types_reject_invalid(self):
+        for invalid_type in ("school", "job", "custom", "unknown", "", "   "):
+            with self.subTest(invalid_type=invalid_type):
+                with self.assertRaises(ValidationError):
+                    Node(
+                        node_id="n1",
+                        node_type=invalid_type,
+                        title="Title",
+                        description="Desc",
+                    )
+                with self.assertRaises(ValidationError):
+                    CandidateNode(
+                        candidate_id="c1",
+                        node_type=invalid_type,
+                        title="Title",
+                        description="Desc",
+                    )
+
+    def test_edge_types_accept_canonical_and_case_insensitive_normalized(self):
+        for raw, expected in (
+            ("progression", "progression"),
+            ("Progression", "progression"),
+            ("ALTERNATIVE", "alternative"),
+            ("Dependency", "dependency"),
+            ("PREREQUISITE", "prerequisite"),
+            ("  conditional  ", "conditional"),
+        ):
+            with self.subTest(raw=raw):
+                cond = "Pass exam" if expected == "conditional" else None
+                edge = Edge(
+                    edge_id="e1",
+                    source_node_id="src",
+                    target_node_id="tgt",
+                    edge_type=raw,
+                    condition=cond,
+                )
+                self.assertEqual(edge.edge_type, expected)
+
+                prop_edge = ProposedEdge(
+                    edge_key="ek1",
+                    source=NodeEndpointRef.candidate("c1"),
+                    target=NodeEndpointRef.candidate("c2"),
+                    edge_type=raw,
+                    condition=cond,
+                )
+                self.assertEqual(prop_edge.edge_type, expected)
+
+    def test_edge_types_reject_invalid_preventing_cycle_bypass(self):
+        for invalid_type in ("requires", "depends_on", "needs", "prereq", "custom", "unknown", ""):
+            with self.subTest(invalid_type=invalid_type):
+                with self.assertRaises(ValidationError):
+                    Edge(
+                        edge_id="e1",
+                        source_node_id="src",
+                        target_node_id="tgt",
+                        edge_type=invalid_type,
+                    )
+                with self.assertRaises(ValidationError):
+                    ProposedEdge(
+                        edge_key="ek1",
+                        source=NodeEndpointRef.candidate("c1"),
+                        target=NodeEndpointRef.candidate("c2"),
+                        edge_type=invalid_type,
+                    )
+
+
+class PrerequisiteConsistencyTests(unittest.TestCase):
+    def test_prerequisite_without_explicit_edge_materializes_prerequisite_edge(self):
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            candidate_node_count=2,
+            generation_intent="explore_alternatives",
+        )
+        c1 = make_candidate("c1")
+        c2 = make_candidate("c2", prerequisite_refs=[NodeEndpointRef.candidate("c1")])
+        proposal = make_proposal([c1, c2], edges=[])
+
+        result = apply_candidate_proposal(request, proposal)
+
+        self.assertEqual(len(result.nodes), 2)
+        # Exactly one visible prerequisite edge must be synthesized
+        self.assertEqual(len(result.edges), 1)
+        prereq_edge = result.edges[0]
+        self.assertEqual(prereq_edge.edge_type, "prerequisite")
+
+        nodes_by_title = {n.title: n for n in result.nodes}
+        c1_node = nodes_by_title["Stage c1"]
+        c2_node = nodes_by_title["Stage c2"]
+        self.assertEqual(prereq_edge.source_node_id, c1_node.node_id)
+        self.assertEqual(prereq_edge.target_node_id, c2_node.node_id)
+        self.assertEqual(c2_node.prerequisite_node_ids, [c1_node.node_id])
+
+    def test_duplicate_prerequisite_declaration_avoids_duplicate_edge(self):
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            candidate_node_count=2,
+            generation_intent="explore_alternatives",
+        )
+        c1 = make_candidate("c1")
+        c2 = make_candidate("c2", prerequisite_refs=[NodeEndpointRef.candidate("c1")])
+        explicit_edge = make_proposed_edge(
+            "explicit-prereq",
+            source=NodeEndpointRef.candidate("c1"),
+            target=NodeEndpointRef.candidate("c2"),
+            edge_type="prerequisite",
+        )
+        proposal = make_proposal([c1, c2], edges=[explicit_edge])
+
+        result = apply_candidate_proposal(request, proposal)
+
+        # Must NOT create a second duplicate edge
+        self.assertEqual(len(result.edges), 1)
+        self.assertEqual(result.edges[0].edge_type, "prerequisite")
+        nodes_by_title = {n.title: n for n in result.nodes}
+        self.assertEqual(result.edges[0].source_node_id, nodes_by_title["Stage c1"].node_id)
+        self.assertEqual(result.edges[0].target_node_id, nodes_by_title["Stage c2"].node_id)
+
+    def test_expansion_prerequisite_without_explicit_edge_materializes_edge(self):
+        existing = make_graph([make_node("foundation")], [])
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["foundation"],
+            candidate_node_count=1,
+            generation_intent="continue",
+        )
+        c1 = make_candidate("advanced", prerequisite_refs=[NodeEndpointRef.existing("foundation")])
+        proposal = make_proposal([c1], edges=[])
+
+        result = apply_candidate_proposal(request, proposal)
+
+        self.assertEqual(len(result.nodes), 2)
+        self.assertEqual(len(result.edges), 1)
+        self.assertEqual(result.edges[0].edge_type, "prerequisite")
+        self.assertEqual(result.edges[0].source_node_id, "foundation")
+        advanced_node = [n for n in result.nodes if n.node_id != "foundation"][0]
+        self.assertEqual(result.edges[0].target_node_id, advanced_node.node_id)
+        self.assertEqual(advanced_node.prerequisite_node_ids, ["foundation"])
+
+    def test_dependency_cycle_from_synthesized_prerequisite_edges_rejected(self):
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            candidate_node_count=2,
+            generation_intent="explore_alternatives",
+        )
+        c1 = make_candidate("c1", prerequisite_refs=[NodeEndpointRef.candidate("c2")])
+        c2 = make_candidate("c2", prerequisite_refs=[NodeEndpointRef.candidate("c1")])
+        proposal = make_proposal([c1, c2], edges=[])
+
+        with self.assertRaisesRegex(GraphValidationError, "dependency cycle detected"):
+            apply_candidate_proposal(request, proposal)
+
+
+class ExpansionConnectivityAndIslandValidationTests(unittest.TestCase):
+    def test_existing_to_existing_edges_cannot_satisfy_candidate_connectivity(self):
+        existing = make_graph([make_node("start"), make_node("other")], [])
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["start"],
+            candidate_node_count=1,
+            generation_intent="continue",
+        )
+        c1 = make_candidate("cand-1")
+        # Proposed edge is between two existing nodes; cand-1 is disconnected
+        e1 = make_proposed_edge(
+            "e1",
+            source=NodeEndpointRef.existing("start"),
+            target=NodeEndpointRef.existing("other"),
+        )
+        proposal = make_proposal([c1], [e1])
+
+        with self.assertRaisesRegex(
+            GraphValidationError, "at least one connection to selected expansion nodes"
+        ):
+            apply_candidate_proposal(request, proposal)
+
+    def test_disconnected_candidate_island_is_rejected(self):
+        existing = make_graph([make_node("start")], [])
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["start"],
+            candidate_node_count=3,
+            generation_intent="explore_alternatives",
+        )
+        c1 = make_candidate("c1")
+        c2 = make_candidate("c2")
+        c3 = make_candidate("c3")
+        # c1 connects to start, but c2 and c3 form an isolated island
+        e1 = make_proposed_edge(
+            "e1",
+            source=NodeEndpointRef.existing("start"),
+            target=NodeEndpointRef.candidate("c1"),
+        )
+        e2 = make_proposed_edge(
+            "e2",
+            source=NodeEndpointRef.candidate("c2"),
+            target=NodeEndpointRef.candidate("c3"),
+        )
+        proposal = make_proposal([c1, c2, c3], [e1, e2])
+
+        with self.assertRaisesRegex(
+            GraphValidationError, "disconnected candidate nodes \\['c2', 'c3'\\] not connected to expansion nodes"
+        ):
+            apply_candidate_proposal(request, proposal)
+
+    def test_valid_multi_hop_expansion_accepted(self):
+        existing = make_graph([make_node("start")], [])
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["start"],
+            candidate_node_count=3,
+            generation_intent="continue",
+        )
+        c1 = make_candidate("c1")
+        c2 = make_candidate("c2")
+        c3 = make_candidate("c3")
+        edges = [
+            make_proposed_edge("e1", NodeEndpointRef.existing("start"), NodeEndpointRef.candidate("c1")),
+            make_proposed_edge("e2", NodeEndpointRef.candidate("c1"), NodeEndpointRef.candidate("c2")),
+            make_proposed_edge("e3", NodeEndpointRef.candidate("c2"), NodeEndpointRef.candidate("c3")),
+        ]
+        proposal = make_proposal([c1, c2, c3], edges)
+        result = apply_candidate_proposal(request, proposal)
+
+        self.assertEqual(len(result.nodes), 4)
+        self.assertEqual(len(result.edges), 3)
+
+    def test_multiple_requested_expansion_targets_supported(self):
+        existing = make_graph([make_node("anchor1"), make_node("anchor2")], [])
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["anchor1", "anchor2"],
+            candidate_node_count=3,
+            generation_intent="continue",
+        )
+        c1 = make_candidate("c1")
+        c2 = make_candidate("c2")
+        c3 = make_candidate("c3")
+        edges = [
+            make_proposed_edge("e1", NodeEndpointRef.existing("anchor1"), NodeEndpointRef.candidate("c1")),
+            make_proposed_edge("e2", NodeEndpointRef.candidate("c1"), NodeEndpointRef.candidate("c2")),
+            make_proposed_edge("e3", NodeEndpointRef.existing("anchor2"), NodeEndpointRef.candidate("c3")),
+        ]
+        proposal = make_proposal([c1, c2, c3], edges)
+        result = apply_candidate_proposal(request, proposal)
+
+        self.assertEqual(len(result.nodes), 5)
+        self.assertEqual(len(result.edges), 3)
+
+    def test_candidates_connected_via_prerequisite_refs_accepted(self):
+        existing = make_graph([make_node("foundation")], [])
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["foundation"],
+            candidate_node_count=2,
+            generation_intent="continue",
+        )
+        c1 = make_candidate("c1", prerequisite_refs=[NodeEndpointRef.existing("foundation")])
+        c2 = make_candidate("c2", prerequisite_refs=[NodeEndpointRef.candidate("c1")])
+        proposal = make_proposal([c1, c2], edges=[])
+
+        result = apply_candidate_proposal(request, proposal)
+        self.assertEqual(len(result.nodes), 3)
+        self.assertEqual(len(result.edges), 2)
+        for edge in result.edges:
+            self.assertEqual(edge.edge_type, "prerequisite")
+
+    def test_failed_candidate_island_validation_preserves_existing_graph(self):
+        existing = make_graph(
+            [make_node("start"), make_node("other")],
+            [make_edge("e-orig", "start", "other")],
+        )
+        original_snapshot = existing.model_dump()
+
+        request = GraphGenerationRequest(
+            student_profile_snapshot=make_profile_snapshot(),
+            current_graph=existing,
+            current_node_ids_to_expand=["start"],
+            candidate_node_count=2,
+            generation_intent="continue",
+        )
+        c1 = make_candidate("c1")
+        c2 = make_candidate("c2")
+        # c1 connects to start, but c2 is isolated
+        e1 = make_proposed_edge("e1", NodeEndpointRef.existing("start"), NodeEndpointRef.candidate("c1"))
+        proposal = make_proposal([c1, c2], [e1])
+
+        with self.assertRaises(GraphValidationError):
+            apply_candidate_proposal(request, proposal)
+
+        # Existing graph remains untouched
+        self.assertEqual(existing.model_dump(), original_snapshot)
+
+    def test_distinct_parallel_edges_with_different_conditions_or_types_allowed(self):
+        existing = make_graph([make_node("src"), make_node("tgt")], [])
+        # Add two parallel edges between src and tgt with different types and conditions
+        e1 = make_edge("e1", "src", "tgt", edge_type="progression")
+        e2 = make_edge("e2", "src", "tgt", edge_type="conditional", condition="Requires merit rank < 1000")
+        graph = make_graph(existing.nodes, [e1, e2])
+
+        validated = validate_graph(graph)
+        self.assertEqual(len(validated.edges), 2)
+        self.assertEqual(validated.edges[0].edge_type, "progression")
+        self.assertEqual(validated.edges[1].edge_type, "conditional")
+        self.assertEqual(validated.edges[1].condition, "Requires merit rank < 1000")
 
 
 if __name__ == "__main__":

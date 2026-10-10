@@ -114,8 +114,25 @@ def update_graph(
         )
 
     validate_graph(existing_graph)
-    parsed_nodes = [Node.model_validate(node) for node in candidate_nodes]
-    parsed_edges = [Edge.model_validate(edge) for edge in proposed_edges]
+    # Validate candidate nodes and edges, accepting both dicts and model instances
+    parsed_nodes = []
+    for node in candidate_nodes:
+        if isinstance(node, Node):
+            parsed_nodes.append(node)
+        else:
+            try:
+                parsed_nodes.append(Node.model_validate(node))
+            except ValidationError as exc:
+                raise GraphValidationError([f"invalid node data: {exc}"]) from exc
+    parsed_edges = []
+    for edge in proposed_edges:
+        if isinstance(edge, Edge):
+            parsed_edges.append(edge)
+        else:
+            try:
+                parsed_edges.append(Edge.model_validate(edge))
+            except ValidationError as exc:
+                raise GraphValidationError([f"invalid edge data: {exc}"]) from exc
 
     # Revalidate serialized records so the returned graph owns independent models.
     combined = PathwayGraph.model_validate(
@@ -257,32 +274,67 @@ def apply_candidate_proposal(
                 f"proposed edge '{edge.edge_key}' is a self-loop on node '{edge.source.target_id}'"
             )
 
-    # 8. Expansion request connectivity requirement
+    # 8. Expansion request connectivity and candidate reachability requirement
     if existing_graph is not None and request.current_node_ids_to_expand:
         expansion_ids = set(request.current_node_ids_to_expand)
-        connected_to_expansion = False
+
+        # Build undirected adjacency between candidate nodes and expansion anchor nodes
+        adj: dict[str, set[str]] = {cand.candidate_id: set() for cand in proposal.candidate_nodes}
+        for exp_id in expansion_ids:
+            adj[exp_id] = set()
 
         for edge in proposal.proposed_edges:
-            if edge.source.kind == "existing_node" and edge.source.node_id in expansion_ids:
-                connected_to_expansion = True
-                break
-            if edge.target.kind == "existing_node" and edge.target.node_id in expansion_ids:
-                connected_to_expansion = True
-                break
-
-        if not connected_to_expansion:
-            for candidate in proposal.candidate_nodes:
-                for prereq in candidate.prerequisite_refs:
-                    if prereq.kind == "existing_node" and prereq.node_id in expansion_ids:
-                        connected_to_expansion = True
-                        break
-                if connected_to_expansion:
-                    break
-
-        if not connected_to_expansion:
-            errors.append(
-                f"expansion proposal must contain at least one connection to selected expansion nodes {sorted(expansion_ids)}"
+            src_id = (
+                edge.source.node_id
+                if edge.source.kind == "existing_node"
+                else edge.source.candidate_id
             )
+            tgt_id = (
+                edge.target.node_id
+                if edge.target.kind == "existing_node"
+                else edge.target.candidate_id
+            )
+            if src_id in adj and tgt_id in adj:
+                adj[src_id].add(tgt_id)
+                adj[tgt_id].add(src_id)
+
+        for candidate in proposal.candidate_nodes:
+            cand_id = candidate.candidate_id
+            for prereq in candidate.prerequisite_refs:
+                prereq_id = (
+                    prereq.node_id
+                    if prereq.kind == "existing_node"
+                    else prereq.candidate_id
+                )
+                if prereq_id in adj:
+                    adj[cand_id].add(prereq_id)
+                    adj[prereq_id].add(cand_id)
+
+        visited: set[str] = set(expansion_ids)
+        queue = deque(sorted(expansion_ids))
+
+        while queue:
+            curr = queue.popleft()
+            for neighbor in adj.get(curr, set()):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+
+        unreachable_candidates = sorted(
+            cand.candidate_id
+            for cand in proposal.candidate_nodes
+            if cand.candidate_id not in visited
+        )
+
+        if unreachable_candidates:
+            if len(unreachable_candidates) == len(proposal.candidate_nodes):
+                errors.append(
+                    f"expansion proposal must contain at least one connection to selected expansion nodes {sorted(expansion_ids)}"
+                )
+            else:
+                errors.append(
+                    f"expansion proposal contains disconnected candidate nodes {unreachable_candidates} not connected to expansion nodes {sorted(expansion_ids)}"
+                )
 
     if errors:
         raise GraphValidationError(errors)
@@ -336,6 +388,38 @@ def apply_candidate_proposal(
                 condition=edge.condition,
             )
         )
+
+    # Prerequisite consistency:
+    # Ensure every declared prerequisite on candidate nodes is represented by a visible edge.
+    # Avoid duplicate prerequisite edges if the proposal already declared the same relationship in proposed_edges.
+    existing_prereq_pairs: set[tuple[str, str]] = set()
+    if existing_graph is not None:
+        for edge in existing_graph.edges:
+            if edge.edge_type in DEPENDENCY_EDGE_TYPES:
+                existing_prereq_pairs.add((edge.source_node_id, edge.target_node_id))
+    for edge in new_edges:
+        if edge.edge_type in DEPENDENCY_EDGE_TYPES:
+            existing_prereq_pairs.add((edge.source_node_id, edge.target_node_id))
+
+    for candidate in proposal.candidate_nodes:
+        target_id = candidate_to_node_id[candidate.candidate_id]
+        for prereq in candidate.prerequisite_refs:
+            source_id = (
+                prereq.node_id
+                if prereq.kind == "existing_node"
+                else candidate_to_node_id[prereq.candidate_id]
+            )
+            if (source_id, target_id) not in existing_prereq_pairs:
+                new_edges.append(
+                    Edge(
+                        edge_id=f"edge_{uuid.uuid4().hex}",
+                        source_node_id=source_id,
+                        target_node_id=target_id,
+                        edge_type="prerequisite",
+                        condition=None,
+                    )
+                )
+                existing_prereq_pairs.add((source_id, target_id))
 
     if existing_graph is None:
         combined = PathwayGraph(
