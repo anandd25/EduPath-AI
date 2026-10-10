@@ -161,7 +161,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
               <div className="space-y-1">
                 <div className="font-semibold">Supabase Environment Setup Required</div>
                 <div className="text-[11px] text-amber-800 leading-relaxed">
-                  {configError || 'Please configure SUPABASE_URL and SUPABASE_ANON_KEY to enable live authentication.'}
+                  {configError || 'Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable live authentication.'}
                 </div>
               </div>
             </div>
