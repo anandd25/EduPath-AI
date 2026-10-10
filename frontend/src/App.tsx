@@ -73,14 +73,6 @@ function EduPathApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [isAuthenticated, loading]);
 
-  // First visit: show the login page to signed-out visitors instead of the landing page.
-  // Authenticated users can still access the landing page, and login/register routes remain available.
-  useEffect(() => {
-    if (!loading && !isAuthenticated && currentRoute === '/') {
-      setCurrentRoute('/login');
-    }
-  }, [loading, isAuthenticated, currentRoute]);
-
   // Sync route changes to window hash
   useEffect(() => {
     window.location.hash = currentRoute;
