@@ -22,6 +22,93 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
+class EvidenceRecord(StrictModel):
+    evidence_id: ReferenceId
+    title: str = Field(min_length=1, max_length=300)
+    url: str = Field(min_length=1, max_length=2000)
+    source_name: str = Field(min_length=1, max_length=200)
+    retrieved_at: str | None = Field(default=None, max_length=50)
+    supports: str = Field(min_length=1, max_length=1000)
+    confidence: Literal["high", "medium", "low", "unverified"] = "unverified"
+
+
+class Milestone(StrictModel):
+    milestone_id: ReferenceId
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(min_length=1, max_length=2000)
+    status: Literal[
+        "not_started", "in_progress", "completed",
+        "blocked", "decision_pending"
+    ] = "not_started"
+    start_date: str | None = None
+    deadline: str | None = None
+    decision_date: str | None = None
+    duration_months: FiniteFloat | None = Field(default=None, ge=0)
+    prerequisite_milestone_ids: list[ReferenceId] = Field(
+        default_factory=list, max_length=100
+    )
+    requirement_notes: list[str] = Field(default_factory=list, max_length=30)
+    cost_amount: FiniteFloat | None = Field(default=None, ge=0)
+    cost_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    funding_notes: list[str] = Field(default_factory=list, max_length=30)
+    evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_cost_currency(self):
+        if self.cost_amount is not None and self.cost_currency is None:
+            raise ValueError("cost_currency is required when cost_amount is provided")
+        if self.cost_amount is None and self.cost_currency is not None:
+            raise ValueError("cost_currency requires a cost_amount")
+        return self
+
+
+class InstitutionRecord(StrictModel):
+    institution_id: ReferenceId
+    name: str = Field(min_length=1, max_length=300)
+    country: str = Field(min_length=1, max_length=100)
+    region: str | None = Field(default=None, max_length=100)
+    program_name: str = Field(min_length=1, max_length=300)
+    duration_months: FiniteFloat | None = Field(default=None, ge=0)
+    admission_requirements: list[str] = Field(default_factory=list, max_length=50)
+    application_deadline: str | None = None
+    tuition_amount: FiniteFloat | None = Field(default=None, ge=0)
+    tuition_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_tuition_currency(self):
+        if self.tuition_amount is not None and self.tuition_currency is None:
+            raise ValueError("tuition_currency is required when tuition_amount is provided")
+        if self.tuition_amount is None and self.tuition_currency is not None:
+            raise ValueError("tuition_currency requires a tuition_amount")
+        return self
+
+
+class FundingOpportunity(StrictModel):
+    funding_id: ReferenceId
+    name: str = Field(min_length=1, max_length=300)
+    funding_type: Literal["scholarship", "grant", "loan", "savings", "other"]
+    amount: FiniteFloat | None = Field(default=None, ge=0)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    application_deadline: str | None = None
+    eligibility_notes: list[str] = Field(default_factory=list, max_length=50)
+    repayment_interest_rate_percent: FiniteFloat | None = Field(default=None, ge=0)
+    repayment_term_months: int | None = Field(default=None, ge=1)
+    evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_funding_currency(self):
+        if self.amount is not None and self.currency is None:
+            raise ValueError("currency is required when amount is provided")
+        if self.amount is None and self.currency is not None:
+            raise ValueError("currency requires an amount")
+        if self.funding_type != "loan" and (
+            self.repayment_interest_rate_percent is not None
+            or self.repayment_term_months is not None
+        ):
+            raise ValueError("repayment fields are only valid for loans")
+        return self
+
 class Node(StrictModel):
     node_id: str = Field(min_length=1, max_length=128)
     node_type: NodeType
@@ -78,12 +165,19 @@ class Edge(StrictModel):
         return self
 
 
+
 class PathwayGraph(StrictModel):
     pathway_id: str = Field(min_length=1, max_length=128)
     nodes: list[Node] = Field(max_length=MAX_GRAPH_NODES)
     edges: list[Edge] = Field(max_length=MAX_GRAPH_EDGES)
     target_outcome: str | None = Field(default=None, max_length=1000)
     schema_version: str = Field(default="1.0", min_length=1, max_length=32)
+
+    evidence_records: list[EvidenceRecord] = Field(default_factory=list, max_length=1000)
+    milestones: list[Milestone] = Field(default_factory=list, max_length=500)
+    institutions: list[InstitutionRecord] = Field(default_factory=list, max_length=250)
+    funding_opportunities: list[FundingOpportunity] = Field(default_factory=list, max_length=500)
+
 
 
 class GraphGenerationRequest(StrictModel):
