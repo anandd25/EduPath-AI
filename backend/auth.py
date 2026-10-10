@@ -1,7 +1,8 @@
+"""Supabase access-token verification for the EduPath API.
 
-"""Supabase access-token verification for the EduPath API."""
-
-import logging
+The API validates the bearer token against Supabase Auth's /auth/v1/user endpoint.
+It does not trust user IDs supplied by the browser.
+"""
 import os
 from typing import Any
 
@@ -9,36 +10,33 @@ import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-logger = logging.getLogger(__name__)
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def _supabase_config() -> tuple[str, str]:
+    # SUPABASE_URL and SUPABASE_ANON_KEY match the existing deployment variable names.
     url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
     anon_key = os.getenv("SUPABASE_ANON_KEY", "").strip()
-
     if not url or not anon_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Supabase authentication is not configured.",
+            detail="Backend Supabase Auth is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY on the backend.",
         )
-
     return url, anon_key
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> dict[str, Any]:
-    """Validate the bearer token against Supabase Auth."""
+    """Return the Supabase user after server-side token validation."""
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Sign in is required.",
+            detail="Sign in is required to access student profiles.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     supabase_url, anon_key = _supabase_config()
-
     try:
         response = httpx.get(
             f"{supabase_url}/auth/v1/user",
@@ -47,20 +45,13 @@ def get_current_user(
                 "Authorization": f"Bearer {credentials.credentials}",
                 "Accept": "application/json",
             },
-            timeout=httpx.Timeout(8.0, connect=3.0),
+            timeout=8.0,
         )
-    except httpx.TimeoutException as exc:
-        logger.warning("Supabase authentication request timed out")
+    except httpx.HTTPError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service timed out. Please try again.",
-        ) from exc
-    except httpx.HTTPError as exc:
-        logger.warning("Supabase authentication service is unavailable")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not verify the session. Please try again.",
-        ) from exc
+            detail="Could not verify the Supabase session. Please try again.",
+        )
 
     if response.status_code in (401, 403):
         raise HTTPException(
@@ -68,34 +59,16 @@ def get_current_user(
             detail="Your session is invalid or expired. Please sign in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
     if response.status_code != 200:
-        logger.warning(
-            "Supabase Auth returned unexpected status %s",
-            response.status_code,
-        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service is temporarily unavailable.",
+            detail="Supabase could not verify the session right now.",
         )
 
     try:
         user = response.json()
-    except ValueError as exc:
-        logger.warning("Supabase Auth returned invalid JSON")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service returned an invalid response.",
-        ) from exc
-
-    if (
-        not isinstance(user, dict)
-        or not isinstance(user.get("id"), str)
-        or not user["id"].strip()
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="The authenticated user response is invalid.",
-        )
-
+    except ValueError:
+        user = None
+    if not isinstance(user, dict) or not isinstance(user.get("id"), str):
+        raise HTTPException(status_code=401, detail="Supabase returned an invalid user session.")
     return user
