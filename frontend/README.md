@@ -1,16 +1,20 @@
-# PathPilot Frontend
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-React + Vite + TypeScript frontend for the education/career decision-support platform.
+# Run and deploy your AI Studio app
 
-## Run
-```bash
-npm install
-npm run dev
-```
+This contains everything you need to run your app locally.
 
-The UI defaults to `http://localhost:8000` for the FastAPI backend. Override with:
-```bash
-VITE_API_BASE=http://localhost:8000 npm run dev
-```
+View your app in AI Studio: https://ai.studio/apps/d875f6f7-5b19-446a-bf8d-ef6e75cf742c
 
-The app has a local fallback so the UI remains explorable without the backend.
+## Run Locally
+
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

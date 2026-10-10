@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F7FAFE;
+    color: #102A43;
+  }
+}
+
+.font-serif-heading {
+  font-family: 'Newsreader', Georgia, Cambria, 'Times New Roman', Times, serif;
+}
+
+/* Subtle clean dotted pattern on pale blue */
+.bg-edupath-pattern {
+  background-size: 28px 28px;
+  background-image: 
+    radial-gradient(circle, rgba(20, 93, 160, 0.06) 1px, transparent 1px);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  header, footer, nav {
+    display: none !important;
+  }
+  body {
+    background-color: #ffffff !important;
+    color: #102A43 !important;
+    font-size: 11pt;
+  }
+  .print-clean {
+    border: 1px solid #DFE8F2 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+}

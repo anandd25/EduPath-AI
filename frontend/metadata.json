@@ -1,0 +1,6 @@
+{
+  "name": "EduPath",
+  "description": "EduPath empowers Class 10 students to explore their interests, academic strengths, financial constraints, and future educational directions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
