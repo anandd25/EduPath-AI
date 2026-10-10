@@ -226,15 +226,20 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
                     "content": str(item.get("content", ""))[:1200],
                 })
 
-        # Remove duplicate URLs and limit prompt size.
+        # Remove duplicate URLs and prefer likely official sources.
         unique = {}
         for item in evidence:
             unique.setdefault(item["url"], item)
 
+        ranked_evidence = sorted(
+            unique.values(),
+            key=lambda item: not item.get("is_official_source", False),
+        )
+
         if not unique:
             return "No usable research results were found. Do not invent verified facts."
 
-        return json.dumps(list(unique.values())[:8], ensure_ascii=False)
+        return json.dumps(ranked_evidence[:8], ensure_ascii=False)
 
     except Exception:
         logger.exception("Tavily research failed during pathway generation")
