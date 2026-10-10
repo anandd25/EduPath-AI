@@ -1,13 +1,13 @@
 /**
  * Supabase Client Initialization
- * Configured via environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
+ * Configured via environment variables SUPABASE_URL and SUPABASE_ANON_KEY.
  * Never exposes service-role keys.
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const rawUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-const rawAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const rawUrl = (import.meta.env.SUPABASE_URL || '').trim();
+const rawAnonKey = (import.meta.env.SUPABASE_ANON_KEY || '').trim();
 
 // Check if variables are populated with actual non-placeholder values
 const isPlaceholderUrl =
@@ -26,7 +26,7 @@ export const isSupabaseConfigured: boolean = !isPlaceholderUrl && !isPlaceholder
 
 export const supabaseConfigurationError: string | null = isSupabaseConfigured
   ? null
-  : 'Supabase credentials are not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment to connect real Supabase Auth.';
+  : 'Supabase credentials are not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY in your environment to connect real Supabase Auth.';
 
 // If configured, use the provided credentials. Otherwise, initialize a dummy client so the application never crashes on load.
 const effectiveUrl = isSupabaseConfigured ? rawUrl : 'https://placeholder.supabase.co';
