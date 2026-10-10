@@ -53,13 +53,55 @@ class Milestone(StrictModel):
     funding_notes: list[str] = Field(default_factory=list, max_length=30)
     evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
 
+    
     @model_validator(mode="after")
-    def validate_cost_currency(self):
-        if self.cost_amount is not None and self.cost_currency is None:
-            raise ValueError("cost_currency is required when cost_amount is provided")
-        if self.cost_amount is None and self.cost_currency is not None:
-            raise ValueError("cost_currency requires a cost_amount")
+    def validate_unique_record_ids(self):
+        collections = [
+            ("evidence_records", self.evidence_records, "evidence_id"),
+            ("milestones", self.milestones, "milestone_id"),
+            ("institutions", self.institutions, "institution_id"),
+            ("funding_opportunities", self.funding_opportunities, "funding_id"),
+        ]
+
+        for collection_name, records, id_field in collections:
+            record_ids = [getattr(record, id_field) for record in records]
+            if len(record_ids) != len(set(record_ids)):
+                raise ValueError(
+                    f"Duplicate IDs found in {collection_name}"
+                )
+
+        evidence_ids = {
+            record.evidence_id for record in self.evidence_records
+        }
+        milestone_ids = {
+            milestone.milestone_id for milestone in self.milestones
+        }
+
+        for milestone in self.milestones:
+            missing_evidence = set(milestone.evidence_ids) - evidence_ids
+            if missing_evidence:
+                raise ValueError(
+                    f"Milestone '{milestone.milestone_id}' references "
+                    f"unknown evidence IDs: {sorted(missing_evidence)}"
+                )
+
+            missing_prerequisites = (
+                set(milestone.prerequisite_milestone_ids) - milestone_ids
+            )
+            if missing_prerequisites:
+                raise ValueError(
+                    f"Milestone '{milestone.milestone_id}' references "
+                    f"unknown prerequisite milestone IDs: "
+                    f"{sorted(missing_prerequisites)}"
+                )
+
+            if milestone.milestone_id in milestone.prerequisite_milestone_ids:
+                raise ValueError(
+                    f"Milestone '{milestone.milestone_id}' cannot depend on itself"
+                )
+
         return self
+
 
 
 class InstitutionRecord(StrictModel):
