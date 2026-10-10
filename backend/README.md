@@ -1,35 +1,44 @@
-# EduPath Student Profile API
+# EduPath AI Backend — Supabase Auth + owned student profiles
 
-FastAPI + SQLAlchemy starter for the EduPath Class 10 student profile schema.
+FastAPI and SQLAlchemy API for EduPath AI. All `/api/profiles` endpoints require a valid Supabase access token in `Authorization: Bearer <access_token>`. The API validates the token with Supabase Auth and derives the owner from the verified user ID; it never trusts a user ID supplied by the browser.
 
-## Run locally
+## Render environment variables
 
-```bash
-python -m venv .venv
-# Windows PowerShell:
-.venv\\Scripts\\Activate.ps1
-# macOS/Linux:
-# source .venv/bin/activate
-pip install -r requirements.txt
-# Optional: copy .env.example to .env and configure DATABASE_URL
-uvicorn main:app --reload
-```
+Set these in the Render backend service (not only in Vercel):
 
-Open http://127.0.0.1:8000/docs.
+- `DATABASE_URL`: your working PostgreSQL connection URL. URL-encode reserved characters in the username/password; never commit this value.
+- `SUPABASE_URL`: the Supabase project URL, e.g. `https://<project-ref>.supabase.co`.
+- `SUPABASE_ANON_KEY`: the public anon/publishable key for that same project. Do not use a service-role key.
+- `FRONTEND_URL`: `https://edu-path-ai-seven.vercel.app` (or your exact production frontend origin).
 
-By default, local development uses SQLite and creates `edupath.db`. Set `DATABASE_URL` in the environment to use PostgreSQL, for example:
+The backend also accepts `FRONTEND_ORIGIN` for compatibility with older deployments. Do not put the database password or service-role key in frontend `VITE_` variables.
 
-`postgresql+psycopg://USER:PASSWORD@HOST:5432/DATABASE`
+## Deploy
+
+Use the backend folder as Render's Root Directory if the repo contains the frontend and backend together. Build/install command: `pip install -r requirements.txt`. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+
+On startup, the app creates missing tables and adds an `owner_id` column/index to an existing `student_profiles` table if needed. Existing profiles with no owner are intentionally hidden from every user rather than assigned to the first person who signs in. If you need to retain access to old rows, review and assign ownership manually using a trusted admin process before exposing them.
 
 ## Routes
 
-- `POST /api/profiles` — create
-- `GET /api/profiles` — list
-- `GET /api/profiles/{id}` — retrieve
-- `PUT /api/profiles/{id}` — replace/update
-- `DELETE /api/profiles/{id}` — delete
-- `GET /health` — health check
+- `GET /` and `GET /health`: health checks (no login required)
+- `POST /api/profiles`: create a profile for the signed-in user
+- `GET /api/profiles`: list only the signed-in user's profiles
+- `GET /api/profiles/{id}`: read only a profile owned by the signed-in user
+- `PUT /api/profiles/{id}`: update only a profile owned by the signed-in user
+- `DELETE /api/profiles/{id}`: delete only a profile owned by the signed-in user
 
-## Production notes
+Unauthenticated profile requests return `401`; attempts to access another user's profile return `404`.
 
-`Base.metadata.create_all()` is for a starter project; use Alembic migrations for production schema changes. Add authentication and per-user authorization before exposing profile records publicly. Keep database credentials in deployment environment variables. The submitted `interest_description` is stored without AI rewriting.
+## Local development
+
+```bash
+python -m venv .venv
+# macOS/Linux: source .venv/bin/activate
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+pip install -r requirements.txt
+cp .env.example .env  # then set real values
+uvicorn main:app --reload
+```
+
+Open `http://127.0.0.1:8000/docs`. A real Supabase access token is required for profile routes.

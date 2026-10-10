@@ -13,6 +13,8 @@ class StudentProfile(Base):
         CheckConstraint("overall_percentage IS NULL OR (overall_percentage >= 0 AND overall_percentage <= 100)", name="ck_overall_percentage"),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    # Supabase Auth user UUID. Nullable only to preserve legacy rows during migration.
+    owner_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     education_stage: Mapped[str] = mapped_column(String(20), default="class10", nullable=False)
     preferred_name: Mapped[str | None] = mapped_column(String(80))
     country: Mapped[str] = mapped_column(String(100), nullable=False)
