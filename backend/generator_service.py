@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from pydantic import ValidationError
@@ -11,6 +12,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from domain_schemas import (
     CandidateProposal,
+    EvidenceRecord,
     GraphGenerationRequest,
     PathwayGraph,
 )
@@ -52,7 +54,6 @@ def format_student_profile_summary(profile: Any) -> str:
 
     lines: list[str] = []
 
-    # Basic demographics and academic status
     stage = data.get("education_stage", "Unknown")
     name = data.get("preferred_name") or "Student"
     country = data.get("country") or "Not specified"
@@ -67,24 +68,25 @@ def format_student_profile_summary(profile: Any) -> str:
     lines.append(f"- Curriculum: {curriculum}")
     lines.append(f"- Preferred Language: {lang}")
 
-    # Overall academic performance
     overall_pct = data.get("overall_percentage")
     overall_status = data.get("overall_result_status")
     if overall_pct is not None:
-        lines.append(f"- Overall Percentage: {_format_num(overall_pct)}% ({overall_status or 'completed'})")
+        lines.append(
+            f"- Overall Percentage: {_format_num(overall_pct)}% "
+            f"({overall_status or 'completed'})"
+        )
     elif overall_status:
         lines.append(f"- Overall Result Status: {overall_status}")
 
-    # Subjects
     subjects = data.get("subjects", [])
     if subjects:
         subj_strs = []
-        for s in subjects:
-            s_name = s.get("name", "Subject")
-            s_marks = s.get("marks")
-            s_max = s.get("maximum_marks")
-            s_fav = " (Favourite)" if s.get("favourite") else ""
-            s_chal = " (Challenging)" if s.get("challenging") else ""
+        for subject in subjects:
+            s_name = subject.get("name", "Subject")
+            s_marks = subject.get("marks")
+            s_max = subject.get("maximum_marks")
+            s_fav = " (Favourite)" if subject.get("favourite") else ""
+            s_chal = " (Challenging)" if subject.get("challenging") else ""
             mark_info = (
                 f"{_format_num(s_marks)}/{_format_num(s_max)}"
                 if s_marks is not None and s_max is not None
@@ -93,50 +95,85 @@ def format_student_profile_summary(profile: Any) -> str:
             subj_strs.append(f"{s_name}: {mark_info}{s_fav}{s_chal}")
         lines.append("- Subjects: " + "; ".join(subj_strs))
 
-    # Interests and written description
     interests = data.get("interests", [])
     if interests:
         lines.append(f"- Stated Interests: {', '.join(interests)}")
+
     interest_desc = data.get("interest_description")
     if interest_desc:
-        lines.append(f"- Student's Own Words / Interest Description: \"{interest_desc}\"")
+        lines.append(
+            f'- Student\'s Own Words / Interest Description: "{interest_desc}"'
+        )
 
-    # Strengths
     strengths = data.get("strengths", [])
     if strengths:
-        str_strs = [f"{st.get('name')}: rating {st.get('rating')}/5" for st in strengths if st.get("name")]
-        if str_strs:
-            lines.append("- Strengths: " + ", ".join(str_strs))
+        strength_items = [
+            f"{item.get('name')}: rating {item.get('rating')}/5"
+            for item in strengths
+            if item.get("name")
+        ]
+        if strength_items:
+            lines.append("- Strengths: " + ", ".join(strength_items))
 
-    # Budget & funding
     budget = data.get("annual_budget") or {}
     if budget.get("amount") is not None:
         lines.append(
-            f"- Annual Budget: {budget.get('currency', 'INR')} {_format_num(budget.get('amount'))} ({budget.get('budget_status', 'estimated')})"
+            f"- Annual Budget: {budget.get('currency', 'INR')} "
+            f"{_format_num(budget.get('amount'))} "
+            f"({budget.get('budget_status', 'estimated')})"
         )
+
     funding = data.get("funding_preferences") or {}
     scholarships = funding.get("interested_in_scholarships")
     loans = funding.get("willing_to_consider_loans")
     funding_notes = []
+
     if scholarships:
         funding_notes.append("Interested in scholarships")
     if loans is not None:
-        funding_notes.append("Willing to consider loans" if loans else "Prefers no loans")
+        funding_notes.append(
+            "Willing to consider loans" if loans else "Prefers no loans"
+        )
     if funding_notes:
         lines.append("- Funding Preferences: " + ", ".join(funding_notes))
 
-    # Career certainty & priorities
     certainty = data.get("career_certainty")
     if certainty:
         lines.append(f"- Career Certainty: {certainty}")
+
     priorities = data.get("priorities", [])
     if priorities:
         lines.append(f"- Key Priorities: {', '.join(priorities)}")
-    dest = data.get("preferred_destination")
-    if dest:
-        lines.append(f"- Preferred Destination: {dest}")
+
+    destination = data.get("preferred_destination")
+    if destination:
+        lines.append(f"- Preferred Destination: {destination}")
 
     return "\n".join(lines)
+
+
+def _profile_dict(request: GraphGenerationRequest) -> dict[str, Any]:
+    """Return a dictionary representation of the student profile."""
+    profile = request.student_profile_snapshot
+
+    if hasattr(profile, "model_dump"):
+        profile = profile.model_dump()
+
+    return profile if isinstance(profile, dict) else {}
+
+
+def _is_likely_official_source(url: str) -> bool:
+    """Heuristically identify likely official domains; this is not verification."""
+    hostname = (urlparse(url).hostname or "").lower().rstrip(".")
+
+    return (
+        hostname == "gov.in"
+        or hostname.endswith(".gov.in")
+        or hostname == "ac.in"
+        or hostname.endswith(".ac.in")
+        or hostname.endswith(".gov")
+        or hostname.endswith(".edu")
+    )
 
 
 def get_pathway_research(request: GraphGenerationRequest) -> str:
@@ -145,30 +182,28 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
 
     logger = logging.getLogger(__name__)
     api_key = os.getenv("TAVILY_API_KEY")
+
     if not api_key:
-        return "Live research unavailable: TAVILY_API_KEY is not configured. Do not claim facts are verified."
+        return (
+            "Live research unavailable: TAVILY_API_KEY is not configured. "
+            "Do not claim facts are verified."
+        )
 
-    
-    profile = request.student_profile_snapshot
-    if hasattr(profile, "model_dump"):
-        profile = profile.model_dump()
-    elif not isinstance(profile, dict):
-        profile = {}
-
+    profile = _profile_dict(request)
     interests = profile.get("interests") or []
     interest_description = profile.get("interest_description") or ""
     region = profile.get("region") or ""
-
     country = profile.get("country") or "India"
 
-    
     topics = [
-        f"site:gov.in OR site:ac.in official Class 10 education pathways eligibility {country}",
-        f"official exams colleges courses fees scholarships {region} {country} government institution",
+        f"site:gov.in OR site:ac.in official education pathways eligibility {country}",
+        (
+            f"official exams colleges courses fees scholarships "
+            f"{region} {country} government institution"
+        ),
     ]
 
-
-    interest_terms = ", ".join(str(x) for x in interests[:4])
+    interest_terms = ", ".join(str(item) for item in interests[:4])
     if interest_terms or interest_description:
         topics.append(
             f"education career pathways for {interest_terms} "
@@ -191,7 +226,7 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
         from tavily import TavilyClient
 
         client = TavilyClient(api_key=api_key)
-        evidence = []
+        evidence: list[dict[str, Any]] = []
 
         for query in topics[:3]:
             response = client.search(
@@ -202,42 +237,37 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
             )
 
             for item in response.get("results", []):
-                
-                url = item.get("url", "")
+                url = str(item.get("url", "")).strip()
                 if not url.startswith("https://"):
                     continue
 
-                # Prefer official sources, while retaining other HTTPS evidence.
-                from urllib.parse import urlparse
-                hostname = urlparse(url).hostname or ""
-                is_official = (
-                    hostname == "gov.in"
-                    or hostname.endswith(".gov.in")
-                    or hostname == "ac.in"
-                    or hostname.endswith(".ac.in")
-                    or hostname.endswith(".gov"
-                    )
+                parsed_url = urlparse(url)
+                if not parsed_url.hostname:
+                    continue
+
+                evidence.append(
+                    {
+                        "is_official_source": _is_likely_official_source(url),
+                        "title": str(item.get("title") or "Untitled")[:300],
+                        "url": url[:2000],
+                        "content": str(item.get("content") or "")[:1200],
+                    }
                 )
 
-                evidence.append({
-                    "is_official_source": is_official,
-                    "title": str(item.get("title", "Untitled"))[:200],
-                    "url": url,
-                    "content": str(item.get("content", ""))[:1200],
-                })
-
-        # Remove duplicate URLs and prefer likely official sources.
-        unique = {}
+        unique: dict[str, dict[str, Any]] = {}
         for item in evidence:
             unique.setdefault(item["url"], item)
 
         ranked_evidence = sorted(
             unique.values(),
-            key=lambda item: not item.get("is_official_source", False),
+            key=lambda item: not item["is_official_source"],
         )
 
-        if not unique:
-            return "No usable research results were found. Do not invent verified facts."
+        if not ranked_evidence:
+            return (
+                "No usable research results were found. "
+                "Do not invent verified facts."
+            )
 
         return json.dumps(ranked_evidence[:8], ensure_ascii=False)
 
@@ -245,24 +275,90 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
         logger.exception("Tavily research failed during pathway generation")
         return "Live research failed. Do not claim facts are verified."
 
-def build_generation_prompt(request: GraphGenerationRequest) -> list[dict[str, str]]:
+
+def _research_evidence_records(
+    research_context: str,
+) -> list[EvidenceRecord]:
+    """Convert usable Tavily search results into validated evidence records."""
+    try:
+        parsed = json.loads(research_context)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    if not isinstance(parsed, list):
+        return []
+
+    records: list[EvidenceRecord] = []
+    seen_urls: set[str] = set()
+
+    for index, item in enumerate(parsed, start=1):
+        if not isinstance(item, dict):
+            continue
+
+        url = str(item.get("url") or "").strip()
+        title = str(item.get("title") or "Untitled source").strip()
+        content = str(item.get("content") or "").strip()
+
+        if not url.startswith("https://") or not content:
+            continue
+
+        hostname = urlparse(url).hostname
+        if not hostname or url in seen_urls:
+            continue
+
+        seen_urls.add(url)
+        likely_official = bool(item.get("is_official_source"))
+
+        # A domain heuristic is not proof that a claim has been verified.
+        confidence = "unverified"
+
+        source_name = hostname[:200]
+        supports = content[:1000]
+
+        try:
+            record = EvidenceRecord(
+                evidence_id=f"research_{index}",
+                title=title[:300] or "Untitled source",
+                url=url[:2000],
+                source_name=source_name,
+                supports=supports,
+                confidence=confidence,
+            )
+        except ValidationError:
+            continue
+
+        records.append(record)
+
+    return records
+
+
+def build_generation_prompt(
+    request: GraphGenerationRequest,
+    research_context: str | None = None,
+) -> list[dict[str, str]]:
     """Build the system and user messages for Groq candidate proposal generation."""
-    profile_summary = format_student_profile_summary(request.student_profile_snapshot)
-    research_context = get_pathway_research(request)
+    profile_summary = format_student_profile_summary(
+        request.student_profile_snapshot
+    )
+    if research_context is None:
+        research_context = get_pathway_research(request)
 
     system_prompt = (
         "You are the EduPath AI Career & Education Simulation Engine.\n"
-        "Your task is to generate realistic, inspiring, and structurally sound education-to-career "
-        "pathway candidate proposals for students, especially those exploring options or undecided.\n\n"
+        "Generate realistic, structurally sound education-to-career pathway "
+        "candidate proposals tailored to the student's profile.\n\n"
         "### STRICT OUTPUT FORMAT RULES\n"
-        f"1. Output MUST be a single valid JSON object strictly matching the CandidateProposal schema with EXACTLY {request.candidate_node_count} candidate nodes:\n"
+        f"1. Output MUST be a single valid JSON object matching the "
+        f"CandidateProposal schema with EXACTLY "
+        f"{request.candidate_node_count} candidate nodes:\n"
         "   {\n"
         '     "candidate_nodes": [\n'
         "       {\n"
         '         "candidate_id": "cand_1",\n'
         '         "node_type": "education" | "career" | "exploration" | "certification",\n'
         '         "title": "Concise Stage Title (1-200 chars)",\n'
-        '         "description": "Clear explanation of this stage, subjects/skills involved, indicative duration/cost range, and relevance to the student (1-4000 chars)",\n'
+        '         "description": "Explanation of this stage, relevant skills, '
+        'indicative duration/cost, and relevance to the student",\n'
         '         "duration_estimate_months": number | null,\n'
         '         "cost_estimate": number | null,\n'
         '         "cost_currency": "INR" | "USD" | null,\n'
@@ -270,96 +366,100 @@ def build_generation_prompt(request: GraphGenerationRequest) -> list[dict[str, s
         '         "institution_ids": [],\n'
         '         "evidence_ids": [],\n'
         '         "prerequisite_refs": [\n'
-        '           {"kind": "candidate", "candidate_id": "cand_X"} OR {"kind": "existing_node", "node_id": "node_Y"}\n'
+        '           {"kind": "candidate", "candidate_id": "cand_X"} OR '
+        '{"kind": "existing_node", "node_id": "node_Y"}\n'
         "         ]\n"
         "       }\n"
         "     ],\n"
         '     "proposed_edges": [\n'
         "       {\n"
         '         "edge_key": "edge_1",\n'
-        '         "source": {"kind": "candidate", "candidate_id": "cand_A"} OR {"kind": "existing_node", "node_id": "node_A"},\n'
-        '         "target": {"kind": "candidate", "candidate_id": "cand_B"} OR {"kind": "existing_node", "node_id": "node_B"},\n'
-        '         "edge_type": "progression" | "alternative" | "conditional" | "dependency" | "prerequisite",\n'
+        '         "source": {"kind": "candidate", "candidate_id": "cand_A"} '
+        'OR {"kind": "existing_node", "node_id": "node_A"},\n'
+        '         "target": {"kind": "candidate", "candidate_id": "cand_B"} '
+        'OR {"kind": "existing_node", "node_id": "node_B"},\n'
+        '         "edge_type": "progression" | "alternative" | "conditional" '
+        '| "dependency" | "prerequisite",\n'
         '         "condition": "Non-empty string if conditional, null otherwise"\n'
         "       }\n"
         "     ]\n"
         "   }\n\n"
-        "2. Node & Edge Type Constraints:\n"
-        "   - Node types MUST ONLY be: 'education', 'career', 'exploration', 'certification'.\n"
-        "   - Edge types MUST ONLY be: 'progression', 'alternative', 'conditional', 'dependency', 'prerequisite'.\n"
-        "   - 'condition' MUST be a non-empty string when edge_type is 'conditional', and MUST be null for all other edge types.\n"
-        "   - 'milestone_ids', 'institution_ids', and 'evidence_ids' MUST be empty arrays `[]`.\n"
-        "   - Temporary IDs: use 'cand_1', 'cand_2', etc. for candidate_id, and 'edge_1', 'edge_2', etc. for edge_key. Every temporary key must be unique.\n"
-        "   - No self-loops (source and target endpoints must not be the same node).\n"
-        "   - Dependency/prerequisite edges and prerequisite_refs must form a strict Directed Acyclic Graph (no cycles).\n\n"
-        "3. Graph Relationship Semantics:\n"
-        "   - Use 'alternative' for parallel educational or career options branching from a decision point (e.g. Science vs. Commerce vs. Polytechnic Diploma).\n"
-        "   - Use 'progression' for sequential stages within a route (e.g. Class 11 -> Class 12 -> Bachelor's Degree).\n"
-        "   - Use 'conditional' when advancing requires meeting explicitly stated criteria (e.g. minimum marks or specific subject requirements).\n"
-        "   - Use 'prerequisite_refs' ONLY for genuine formal entry requirements (e.g. Class 10 completion for Class 11, or Class 12 for B.Tech), NOT for optional or recommended prep.\n\n"
-        "4. Estimates vs. Verified Facts:\n"
-        "   - Costs (cost_estimate) and durations (duration_estimate_months) are indicative estimates that vary by institution (government vs. private), program, state, and year.\n"
-        "   - In node descriptions, phrase figures as estimated ranges and clarify whether cost is annual or total for the stage.\n"
-        "   - NEVER present unverified figures as guaranteed admission eligibility, fixed fee structures, scholarships, or guaranteed salaries.\n\n"
-        "5. Post-Class 10 Educational Pathways Guidance:\n"
-        "   - Class 10 graduates have multiple parallel entry routes:\n"
-        "     (a) Higher Secondary (Class 11 & 12): Streams like Science (PCM/PCB), Commerce, Humanities/Arts, or Vocational streams, leading to Undergraduate Degrees (B.Tech, B.Sc, B.Com, BA, BCA, B.Des, etc.).\n"
-        "     (b) Polytechnic Diploma (typically 3 years): Technical engineering diplomas (Computer, Mechanical, Electrical, Civil, etc.) entered directly after Class 10, leading to junior technician/engineer roles OR Lateral Entry into 2nd year B.Tech.\n"
-        "     (c) ITI & Vocational Training (1–2 years): Practical trade certificates (Electrician, Fitter, COPA, Welder, etc.) entered directly after Class 10, leading to apprenticeships or skilled trade employment.\n"
-        "   - Crucial: Polytechnic Diplomas and ITI training are direct post-Class 10 alternatives; do NOT make Class 12 a universal prerequisite for a 3-year polytechnic diploma or ITI route.\n"
-        "   - Undecided Students ('exploring'): When career certainty is 'exploring', favor broad, accessible foundational options that allow discovering interests without premature lock-in. Root candidate nodes must represent genuine educational choices rather than generic meta-activities like 'Self-Assessment'."
+        "2. Node and edge constraints:\n"
+        "- Node types: education, career, exploration, certification.\n"
+        "- Edge types: progression, alternative, conditional, dependency, prerequisite.\n"
+        "- Condition must be non-empty for conditional edges and null otherwise.\n"
+        "- milestone_ids, institution_ids, and evidence_ids must be empty arrays.\n"
+        "- Use unique temporary IDs cand_1, cand_2, ... and edge_1, edge_2, ... .\n"
+        "- Do not create self-loops or dependency/prerequisite cycles.\n"
+        "- Use prerequisite_refs only for genuine formal entry requirements.\n\n"
+        "3. Relationship semantics:\n"
+        "- Use alternative for parallel education or career choices.\n"
+        "- Use progression for sequential stages.\n"
+        "- Use conditional for advancement requiring stated criteria.\n\n"
+        "4. Estimates and evidence:\n"
+        "- Costs and durations are indicative and may vary by institution and year.\n"
+        "- Label estimates clearly as annual or total-stage estimates where possible.\n"
+        "- Never present unverified figures as guaranteed eligibility, fees, "
+        "scholarships, admission outcomes, or salaries.\n"
+        "- Research snippets are leads, not definitive proof.\n"
+        "- Do not invent source URLs, titles, dates, or requirements.\n"
+        "- Explain when important information requires official verification.\n\n"
+        "5. Post-Class 10 pathways:\n"
+        "- Include relevant options such as Class 11-12 streams, polytechnic "
+        "diplomas, and ITI/vocational training where appropriate.\n"
+        "- Do not make Class 12 a universal prerequisite for polytechnic diplomas "
+        "or ITI training entered after Class 10.\n"
+        "- For undecided students, favor broad foundations and multiple options "
+        "without premature lock-in."
     )
 
-    user_lines: list[str] = [
+    user_lines = [
         "### STUDENT PROFILE",
         profile_summary,
-        "",        "### LIVE WEB RESEARCH EVIDENCE",
+        "",
+        "### LIVE WEB RESEARCH EVIDENCE",
         research_context,
         "",
         "### RESEARCH RULES",
-        "- Use research evidence to improve relevance and factual accuracy.",
-        "- Never invent URLs, source titles, eligibility rules, exam dates, fees, cutoffs, scholarships or salaries.",
-        "- Treat search snippets as leads, not definitive proof.",
-        "- Prefer official exam authorities, government portals and institution websites.",
-        "- Include useful source URLs in the relevant node description.",
-        "- If evidence is missing or conflicting, explicitly say it needs verification.",
-        "- Generate pathways based on the student's interests; do not restrict options to a predefined career list.",
+        "- Prefer official exam authorities, government portals, and institution websites.",
+        "- Treat official-domain labels as heuristics, not proof of accuracy.",
+        "- Include relevant source URLs in descriptions when useful.",
+        "- If evidence is missing, conflicting, or incomplete, say it needs verification.",
+        "- Tailor options to the student's interests without restricting them to a fixed career list.",
         "",
         "### GENERATION PARAMETERS",
         f"- Intent: {request.generation_intent}",
-        f"- Required Candidate Node Count: EXACTLY {request.candidate_node_count} nodes (Your 'candidate_nodes' array MUST have a length of exactly {request.candidate_node_count}, containing cand_1 to cand_{request.candidate_node_count}).",
+        f"- Required candidate node count: exactly {request.candidate_node_count}.",
         "",
     ]
 
-    # Intent-specific guidance
     if request.generation_intent == "continue":
         user_lines.extend(
             [
-                "### INTENT OBJECTIVE: FORWARD PROGRESSION (CONTINUE ROUTE)",
-                "- Generate the next sequential chronological stages progressing forward along the selected path.",
-                "- Connect candidates to the next logical education milestones, practical training, or career outcomes.",
-                "- Prefer 'progression' edges for direct chronological sequence.",
+                "### INTENT: FORWARD PROGRESSION",
+                "- Generate the next sequential stages along the selected path.",
+                "- Prefer progression edges for direct chronological sequences.",
                 "",
             ]
         )
     elif request.generation_intent == "explore_alternatives":
         user_lines.extend(
             [
-                "### INTENT OBJECTIVE: EXPLORE ALTERNATIVE PATHWAYS (BRANCHING ROUTES)",
-                "- Generate genuinely different parallel routes, distinct stream choices, or alternative specializations branching from the decision point.",
-                "- Provide viable alternatives rather than continuing the same single trajectory.",
-                "- Prefer 'alternative' edges originating from the selected node to represent divergent choices.",
-                "- Avoid duplicating routes or branches already present in the existing graph.",
+                "### INTENT: ALTERNATIVE PATHWAYS",
+                "- Generate genuinely different parallel routes or specializations.",
+                "- Prefer alternative edges from the relevant decision point.",
+                "- Avoid duplicating existing routes.",
                 "",
             ]
         )
     elif request.generation_intent == "recover_from_blocked_route":
         user_lines.extend(
             [
-                "### INTENT OBJECTIVE: RECOVER FROM BLOCKED ROUTE (DETOURS & ALTERNATE QUALIFICATIONS)",
-                "- Generate plausible recovery options, bridge courses, vocational diplomas, or substitute qualifications departing from the selected node.",
-                "- Use only the available student and graph context; do not invent unstated reasons why a path is blocked.",
-                "- Prefer 'alternative' or 'conditional' edges to provide accessible secondary options.",
+                "### INTENT: RECOVERY FROM A BLOCKED ROUTE",
+                "- Generate plausible detours, bridge options, vocational routes, "
+                "or substitute qualifications.",
+                "- Do not invent unstated reasons for the blocked route.",
+                "- Prefer alternative or conditional edges where appropriate.",
                 "",
             ]
         )
@@ -367,56 +467,71 @@ def build_generation_prompt(request: GraphGenerationRequest) -> list[dict[str, s
     if request.current_graph is None:
         user_lines.extend(
             [
-                "### GENERATION MODE: INITIAL PATHWAY GENERATION",
-                "- Starting from the student's current education stage, generate an initial exploration pathway with branching options across distinct post-Class 10 routes.",
-                "- Because this is initial generation, all endpoints in `prerequisite_refs` and `proposed_edges` MUST use `kind: \"candidate\"` referencing candidate IDs within this proposal.",
-                "- Do NOT use `kind: \"existing_node\"`.",
+                "### MODE: INITIAL PATHWAY GENERATION",
+                "- Generate branching education options from the student's current stage.",
+                "- All prerequisite_refs and proposed_edges endpoints must use candidate IDs.",
+                "- Do not use existing_node endpoints.",
+                "",
             ]
         )
     else:
+        graph = request.current_graph
+        node_titles = {node.node_id: node.title for node in graph.nodes}
+
         existing_nodes_desc = "\n".join(
-            f"  * Node ID: `{n.node_id}` | Type: `{n.node_type}` | Title: \"{n.title}\""
-            for n in request.current_graph.nodes
+            f'  * Node ID: `{node.node_id}` | Type: `{node.node_type}` '
+            f'| Title: "{node.title}"'
+            for node in graph.nodes
         )
-        node_titles = {n.node_id: n.title for n in request.current_graph.nodes}
-        if request.current_graph.edges:
+
+        if graph.edges:
             existing_edges_desc = "\n".join(
-                f"  * Edge: `{e.source_node_id}` (\"{node_titles.get(e.source_node_id, 'Node')}\") "
-                f"-[{e.edge_type.upper()}{f' (Condition: {e.condition})' if e.condition else ''}]-> "
-                f"`{e.target_node_id}` (\"{node_titles.get(e.target_node_id, 'Node')}\")"
-                for e in request.current_graph.edges
+                f'  * `{edge.source_node_id}` '
+                f'("{node_titles.get(edge.source_node_id, "Node")}") '
+                f'-[{edge.edge_type.upper()}'
+                f'{f" (Condition: {edge.condition})" if edge.condition else ""}]-> '
+                f'`{edge.target_node_id}` '
+                f'("{node_titles.get(edge.target_node_id, "Node")}")'
+                for edge in graph.edges
             )
         else:
             existing_edges_desc = "  (No existing edges in current graph)"
 
         target_nodes = [
-            n for n in request.current_graph.nodes if n.node_id in request.current_node_ids_to_expand
+            node
+            for node in graph.nodes
+            if node.node_id in request.current_node_ids_to_expand
         ]
+
         target_nodes_desc = "\n".join(
-            f"  * Expansion Target Node: `{n.node_id}` (Title: \"{n.title}\", Type: `{n.node_type}`)\n    Description: {n.description}"
-            for n in target_nodes
+            f'  * Expansion target: `{node.node_id}` '
+            f'(Title: "{node.title}", Type: `{node.node_type}`)\n'
+            f"    Description: {node.description}"
+            for node in target_nodes
         )
 
         user_lines.extend(
             [
-                "### GENERATION MODE: GRAPH EXPANSION",
-                "Existing Pathway Nodes in Current Graph:",
+                "### MODE: GRAPH EXPANSION",
+                "Existing pathway nodes:",
                 existing_nodes_desc,
                 "",
-                "Existing Connections in Current Graph:",
+                "Existing connections:",
                 existing_edges_desc,
                 "",
-                "Selected Target Node(s) to Expand:",
+                "Selected expansion targets:",
                 target_nodes_desc,
                 "",
-                "- You MUST expand from or connect new candidates to the selected target node(s).",
-                "- At least one candidate node or proposed edge MUST connect to a target node using `{\"kind\": \"existing_node\", \"node_id\": \"<TARGET_ID>\"}`.",
-                "- Candidate nodes in this proposal must be referenced with `{\"kind\": \"candidate\", \"candidate_id\": \"cand_X\"}`.",
-                "- Do not invent new node_ids for existing nodes; use their exact existing Node IDs.",
+                "- Connect new candidates to at least one selected target node.",
+                "- Use exact existing node IDs for existing_node endpoints.",
+                "- Use candidate IDs for proposed nodes.",
+                "",
             ]
         )
 
-    user_lines.append("\nReturn ONLY the JSON object conforming to CandidateProposal.")
+    user_lines.append(
+        "Return ONLY the JSON object conforming to CandidateProposal."
+    )
 
     return [
         {"role": "system", "content": system_prompt},
@@ -429,48 +544,45 @@ def generate_pathway_graph(
     client: Any | None = None,
     model: str | None = None,
 ) -> PathwayGraph:
-    """Orchestrate end-to-end pathway graph generation via Groq and graph engine validation.
-
-    Args:
-        request: GraphGenerationRequest object or dictionary.
-        client: Optional injected Groq client (e.g. mock client for unit testing).
-        model: Optional model name override. Defaults to GROQ_MODEL env var or 'llama-3.3-70b-versatile'.
-
-    Returns:
-        PathwayGraph: Validated complete pathway graph with permanent IDs.
-
-    Raises:
-        GraphValidationError: If request or graph engine validation fails.
-        LLMConfigurationError: If Groq credentials/client cannot be initialized.
-        LLMProviderError: If the Groq API call fails.
-        LLMResponseParsingError: If LLM output cannot be parsed into a valid CandidateProposal.
-    """
+    """Generate a validated pathway graph and attach structured research evidence."""
     if isinstance(request, dict):
         try:
             parsed_request = GraphGenerationRequest.model_validate(request)
         except ValidationError as exc:
-            raise GraphValidationError([f"invalid graph generation request: {exc}"]) from exc
+            raise GraphValidationError(
+                [f"invalid graph generation request: {exc}"]
+            ) from exc
     else:
         parsed_request = request
 
-    # Initialize Groq client if not injected
     if client is None:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise LLMConfigurationError(
                 "GROQ_API_KEY environment variable is not set and no client was provided"
             )
+
         try:
             from groq import Groq
 
             client = Groq(api_key=api_key)
         except Exception as exc:
-            raise LLMConfigurationError(f"Failed to initialize Groq client: {exc}") from exc
+            raise LLMConfigurationError(
+                f"Failed to initialize Groq client: {exc}"
+            ) from exc
 
-    resolved_model = model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-    messages = build_generation_prompt(parsed_request)
+    resolved_model = model or os.getenv(
+        "GROQ_MODEL",
+        "llama-3.3-70b-versatile",
+    )
 
-    # Invoke Groq API
+    # Fetch research once so the prompt and evidence records use the same results.
+    research_context = get_pathway_research(parsed_request)
+    messages = build_generation_prompt(
+        parsed_request,
+        research_context=research_context,
+    )
+
     try:
         response = client.chat.completions.create(
             model=resolved_model,
@@ -481,23 +593,54 @@ def generate_pathway_graph(
     except Exception as exc:
         raise LLMProviderError(f"Groq API call failed: {exc}") from exc
 
-    # Parse response content
     try:
         choice = response.choices[0]
         content = choice.message.content
-        if not content or not content.strip():
-            raise LLMResponseParsingError("Groq returned empty response content")
-        raw_json = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise LLMResponseParsingError(f"Groq response is not valid JSON: {exc}") from exc
-    except (AttributeError, IndexError) as exc:
-        raise LLMResponseParsingError(f"Malformed Groq response structure: {exc}") from exc
 
-    # Validate against CandidateProposal schema
+        if not content or not content.strip():
+            raise LLMResponseParsingError(
+                "Groq returned empty response content"
+            )
+
+        raw_json = json.loads(content)
+
+    except json.JSONDecodeError as exc:
+        raise LLMResponseParsingError(
+            f"Groq response is not valid JSON: {exc}"
+        ) from exc
+    except (AttributeError, IndexError) as exc:
+        raise LLMResponseParsingError(
+            f"Malformed Groq response structure: {exc}"
+        ) from exc
+
     try:
         proposal = CandidateProposal.model_validate(raw_json)
     except ValidationError as exc:
-        raise LLMResponseParsingError(f"Candidate proposal schema validation failed: {exc}") from exc
+        raise LLMResponseParsingError(
+            f"Candidate proposal schema validation failed: {exc}"
+        ) from exc
 
-    # Ingest and atomically validate via graph engine
-    return apply_candidate_proposal(parsed_request, proposal)
+    # Let the existing graph engine validate and apply the candidate proposal first.
+    graph = apply_candidate_proposal(parsed_request, proposal)
+
+    # Attach evidence using the schema's validated fields.
+    evidence_records = _research_evidence_records(research_context)
+
+    if evidence_records:
+        existing_ids = {
+            record.evidence_id
+            for record in graph.evidence_records
+        }
+
+        for record in evidence_records:
+            if record.evidence_id not in existing_ids:
+                graph.evidence_records.append(record)
+                existing_ids.add(record.evidence_id)
+
+    # Revalidate the final graph, including record IDs and graph references.
+    try:
+        return PathwayGraph.model_validate(graph.model_dump())
+    except ValidationError as exc:
+        raise GraphValidationError(
+            [f"generated pathway graph validation failed: {exc}"]
+        ) from exc
