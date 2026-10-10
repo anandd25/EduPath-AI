@@ -209,6 +209,7 @@ class Edge(StrictModel):
 
 
 
+
 class PathwayGraph(StrictModel):
     pathway_id: str = Field(min_length=1, max_length=128)
     nodes: list[Node] = Field(max_length=MAX_GRAPH_NODES)
@@ -233,11 +234,59 @@ class PathwayGraph(StrictModel):
         for collection_name, records, id_field in collections:
             record_ids = [getattr(record, id_field) for record in records]
             if len(record_ids) != len(set(record_ids)):
+                raise ValueError(f"Duplicate IDs found in {collection_name}")
+
+        evidence_ids = {record.evidence_id for record in self.evidence_records}
+        milestone_ids = {milestone.milestone_id for milestone in self.milestones}
+
+        # Validate milestone references and build the prerequisite graph.
+        prerequisite_graph = {}
+
+        for milestone in self.milestones:
+            missing_evidence = set(milestone.evidence_ids) - evidence_ids
+            if missing_evidence:
                 raise ValueError(
-                    f"Duplicate IDs found in {collection_name}"
+                    f"Milestone '{milestone.milestone_id}' references "
+                    f"unknown evidence IDs: {sorted(missing_evidence)}"
                 )
 
+            missing_prerequisites = (
+                set(milestone.prerequisite_milestone_ids) - milestone_ids
+            )
+            if missing_prerequisites:
+                raise ValueError(
+                    f"Milestone '{milestone.milestone_id}' references "
+                    f"unknown prerequisite milestone IDs: "
+                    f"{sorted(missing_prerequisites)}"
+                )
+
+            prerequisite_graph[milestone.milestone_id] = (
+                milestone.prerequisite_milestone_ids
+            )
+
+        # Detect indirect cycles using depth-first search.
+        visiting = set()
+        visited = set()
+
+        def visit(milestone_id):
+            if milestone_id in visiting:
+                raise ValueError(
+                    f"Milestone prerequisite cycle detected at '{milestone_id}'"
+                )
+            if milestone_id in visited:
+                return
+
+            visiting.add(milestone_id)
+            for prerequisite_id in prerequisite_graph[milestone_id]:
+                visit(prerequisite_id)
+            visiting.remove(milestone_id)
+            visited.add(milestone_id)
+
+        for milestone_id in prerequisite_graph:
+            visit(milestone_id)
+
         return self
+
 
 
 
