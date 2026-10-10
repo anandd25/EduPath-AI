@@ -48,3 +48,7 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+from routers.research import router as research_router
+
+app.include_router(research_router)
