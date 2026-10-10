@@ -42,3 +42,10 @@ uvicorn main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/docs`. A real Supabase access token is required for profile routes.
+
+
+## Important: make Supabase PostgreSQL the production database
+
+In Render, set `DATABASE_URL` to the PostgreSQL connection string shown in Supabase → Project Settings → Database (or Connect). Use the PostgreSQL/SQLAlchemy-compatible URI and URL-encode reserved characters in the database password. Do not set this to a `sqlite:///...` path in production. The backend deliberately refuses to start on Render without a PostgreSQL URL so profile saves cannot silently go into a local `edupath.db` file.
+
+The `POST /api/profiles` and `PUT /api/profiles/{id}` endpoints require a valid Supabase access token and assign the profile to that authenticated user. `GET /api/profiles` returns only the current user's profiles. The frontend now treats a failed save as an error rather than offering to continue with an unsaved local-only profile.

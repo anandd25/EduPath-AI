@@ -50,6 +50,17 @@ export const storageService = {
   },
 
   /**
+   * Clear the cached confirmed profile. The backend remains the source of truth.
+   */
+  clearConfirmedProfile(): void {
+    try {
+      localStorage.removeItem(CONFIRMED_PROFILE_KEY);
+    } catch {
+      // ignore
+    }
+  },
+
+  /**
    * Get confirmed backend profile
    */
   getConfirmedProfile(): StudentProfileOut | null {

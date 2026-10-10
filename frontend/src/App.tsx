@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { StudentProfileCreate, StudentProfileOut } from './types/studentProfile';
 import { storageService } from './services/storageService';
+import { apiService } from './services/apiService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -27,9 +28,7 @@ function EduPathApp() {
     return storageService.getDraftProfile();
   });
 
-  const [confirmedProfile, setConfirmedProfile] = useState<StudentProfileOut | null>(() => {
-    return storageService.getConfirmedProfile();
-  });
+  const [confirmedProfile, setConfirmedProfile] = useState<StudentProfileOut | null>(null);
 
   const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
@@ -73,14 +72,6 @@ function EduPathApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [isAuthenticated, loading]);
 
-  // First visit: show the login page to signed-out visitors instead of the landing page.
-  // Authenticated users can still access the landing page, and login/register routes remain available.
-  useEffect(() => {
-    if (!loading && !isAuthenticated && currentRoute === '/') {
-      setCurrentRoute('/login');
-    }
-  }, [loading, isAuthenticated, currentRoute]);
-
   // Sync route changes to window hash
   useEffect(() => {
     window.location.hash = currentRoute;
@@ -109,6 +100,39 @@ function EduPathApp() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [isAuthenticated, loading, handleNavigate]);
 
+  // The backend database is the source of truth for confirmed profiles.
+  // Local storage is only a convenience cache, never a substitute for a successful save.
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isAuthenticated) {
+      setConfirmedProfile(null);
+      storageService.clearConfirmedProfile();
+      return () => { cancelled = true; };
+    }
+
+    apiService.listProfiles(0, 1)
+      .then((profiles) => {
+        if (cancelled) return;
+        const latestProfile = profiles[0] ?? null;
+        setConfirmedProfile(latestProfile);
+        if (latestProfile) {
+          storageService.saveConfirmedProfile(latestProfile);
+          if (window.location.hash === '#/wizard') window.location.hash = '/profile';
+        } else {
+          storageService.clearConfirmedProfile();
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('Could not load the saved profile from the backend:', error);
+          setRedirectNotice('We could not load your saved profile. Please check that the backend database is configured and try again.');
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated, user?.id]);
+
   // Update preferred name in draft profile when user logs in
   useEffect(() => {
     if (user?.user_metadata?.preferred_name && !draftProfile.preferred_name) {
@@ -119,13 +143,10 @@ function EduPathApp() {
     }
   }, [user, draftProfile.preferred_name]);
 
-  const handleLoginSuccess = (hasExistingProfile: boolean) => {
+  const handleLoginSuccess = (_hasExistingProfile: boolean) => {
     setRedirectNotice(null);
-    if (hasExistingProfile || confirmedProfile) {
-      handleNavigate('/profile');
-    } else {
-      handleNavigate('/wizard');
-    }
+    // The backend fetch in the auth effect decides whether an existing profile is present.
+    handleNavigate(confirmedProfile ? '/profile' : '/wizard');
   };
 
   const handleRegisterSuccess = (needsEmailConfirmation: boolean) => {
