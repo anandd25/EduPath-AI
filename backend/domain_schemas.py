@@ -166,6 +166,7 @@ class Edge(StrictModel):
 
 
 
+
 class PathwayGraph(StrictModel):
     pathway_id: str = Field(min_length=1, max_length=128)
     nodes: list[Node] = Field(max_length=MAX_GRAPH_NODES)
@@ -177,6 +178,24 @@ class PathwayGraph(StrictModel):
     milestones: list[Milestone] = Field(default_factory=list, max_length=500)
     institutions: list[InstitutionRecord] = Field(default_factory=list, max_length=250)
     funding_opportunities: list[FundingOpportunity] = Field(default_factory=list, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_unique_record_ids(self):
+        collections = [
+            ("evidence_records", self.evidence_records, "evidence_id"),
+            ("milestones", self.milestones, "milestone_id"),
+            ("institutions", self.institutions, "institution_id"),
+            ("funding_opportunities", self.funding_opportunities, "funding_id"),
+        ]
+
+        for collection_name, records, id_field in collections:
+            record_ids = [getattr(record, id_field) for record in records]
+            if len(record_ids) != len(set(record_ids)):
+                raise ValueError(
+                    f"Duplicate IDs found in {collection_name}"
+                )
+
+        return self
 
 
 
