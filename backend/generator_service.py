@@ -139,9 +139,88 @@ def format_student_profile_summary(profile: Any) -> str:
     return "\n".join(lines)
 
 
+def get_pathway_research(request: GraphGenerationRequest) -> str:
+    """Fetch concise web evidence to ground pathway generation."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+    api_key = os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        return "Live research unavailable: TAVILY_API_KEY is not configured. Do not claim facts are verified."
+
+    profile = request.student_profile_snapshot
+    interests = profile.get("interests") or []
+    interest_description = profile.get("interest_description", "")
+    region = profile.get("region") or ""
+    country = profile.get("country") or "India"
+
+    topics = [
+        f"official Class 10 education pathways and eligibility {country}",
+        f"official exams colleges courses fees scholarships {region} {country}",
+    ]
+
+    interest_terms = ", ".join(str(x) for x in interests[:4])
+    if interest_terms or interest_description:
+        topics.append(
+            f"education career pathways for {interest_terms} "
+            f"{interest_description} {region} {country}"
+        )
+
+    if request.current_graph:
+        titles = [
+            node.title
+            for node in request.current_graph.nodes
+            if node.node_id in request.current_node_ids_to_expand
+        ]
+        if titles:
+            topics.append(
+                f"official eligibility fees admissions information for "
+                f"{', '.join(titles[:3])} {country}"
+            )
+
+    try:
+        from tavily import TavilyClient
+
+        client = TavilyClient(api_key=api_key)
+        evidence = []
+
+        for query in topics[:3]:
+            response = client.search(
+                query=query,
+                search_depth="basic",
+                max_results=3,
+                topic="general",
+            )
+
+            for item in response.get("results", []):
+                url = item.get("url", "")
+                if not url.startswith("https://"):
+                    continue
+
+                evidence.append({
+                    "title": str(item.get("title", "Untitled"))[:200],
+                    "url": url,
+                    "content": str(item.get("content", ""))[:1200],
+                })
+
+        # Remove duplicate URLs and limit prompt size.
+        unique = {}
+        for item in evidence:
+            unique.setdefault(item["url"], item)
+
+        if not unique:
+            return "No usable research results were found. Do not invent verified facts."
+
+        return json.dumps(list(unique.values())[:8], ensure_ascii=False)
+
+    except Exception:
+        logger.exception("Tavily research failed during pathway generation")
+        return "Live research failed. Do not claim facts are verified."
+
 def build_generation_prompt(request: GraphGenerationRequest) -> list[dict[str, str]]:
     """Build the system and user messages for Groq candidate proposal generation."""
     profile_summary = format_student_profile_summary(request.student_profile_snapshot)
+    research_context = get_pathway_research(request)
 
     system_prompt = (
         "You are the EduPath AI Career & Education Simulation Engine.\n"
@@ -206,6 +285,17 @@ def build_generation_prompt(request: GraphGenerationRequest) -> list[dict[str, s
     user_lines: list[str] = [
         "### STUDENT PROFILE",
         profile_summary,
+        "",        "### LIVE WEB RESEARCH EVIDENCE",
+        research_context,
+        "",
+        "### RESEARCH RULES",
+        "- Use research evidence to improve relevance and factual accuracy.",
+        "- Never invent URLs, source titles, eligibility rules, exam dates, fees, cutoffs, scholarships or salaries.",
+        "- Treat search snippets as leads, not definitive proof.",
+        "- Prefer official exam authorities, government portals and institution websites.",
+        "- Include useful source URLs in the relevant node description.",
+        "- If evidence is missing or conflicting, explicitly say it needs verification.",
+        "- Generate pathways based on the student's interests; do not restrict options to a predefined career list.",
         "",
         "### GENERATION PARAMETERS",
         f"- Intent: {request.generation_intent}",
