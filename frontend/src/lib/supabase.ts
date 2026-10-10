@@ -1,6 +1,6 @@
 /**
  * Supabase Client Initialization
- * Configured via environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
+ * Configured via environment variables SUPABASE_URL and SUPABASE_ANON_KEY.
  * Never exposes service-role keys.
  */
 
