@@ -95,10 +95,39 @@ class Milestone(StrictModel):
                     f"{sorted(missing_prerequisites)}"
                 )
 
+            
             if milestone.milestone_id in milestone.prerequisite_milestone_ids:
                 raise ValueError(
                     f"Milestone '{milestone.milestone_id}' cannot depend on itself"
                 )
+
+            prerequisite_graph = {
+                milestone.milestone_id: milestone.prerequisite_milestone_ids
+                for milestone in self.milestones
+            }
+
+            visiting = set()
+            visited = set()
+
+            def visit(milestone_id):
+                if milestone_id in visiting:
+                    raise ValueError(
+                        f"Milestone prerequisite cycle detected at '{milestone_id}'"
+                    )
+                if milestone_id in visited:
+                    return
+
+                visiting.add(milestone_id)
+                for prerequisite_id in prerequisite_graph[milestone_id]:
+                    visit(prerequisite_id)
+                visiting.remove(milestone_id)
+                visited.add(milestone_id)
+
+            for milestone_id in prerequisite_graph:
+                visit(milestone_id)
+
+            
+
 
         return self
 
