@@ -3,6 +3,16 @@ import {
   FlaskConical, BarChart3, BookOpen, Wrench, Sparkles, ChevronRight,
   ChevronDown, GraduationCap, MapPin, Wallet, BriefcaseBusiness, X, Plus,
 } from 'lucide-react';
+import {
+  searchRoadmapResources,
+  type ResearchResult,
+} from '../lib/research';
+
+
+const [researchResults, setResearchResults] = useState<ResearchResult[]>([]);
+const [researchLoading, setResearchLoading] = useState(false);
+const [researchError, setResearchError] = useState('');
+
 
 type PathwayOption = {
   id: string;
@@ -115,6 +125,33 @@ export const PathwayDiagram: React.FC = () => {
 
   const selectedIcon = selectedPathway && 'icon' in selectedPathway ? selectedPathway.icon : GraduationCap;
 
+  const researchSelectedStep = async () => {
+  const query = selected.id === 'class10'
+    ? 'Education pathways after Class 10 in India'
+    : `${selected.title} education pathway subjects courses careers India`;
+
+  setResearchLoading(true);
+  setResearchError('');
+  setResearchResults([]);
+
+  try {
+    const results = await searchRoadmapResources(query);
+    setResearchResults(results);
+
+    if (results.length === 0) {
+      setResearchError('No resources found. Try again later.');
+    }
+  } catch (error) {
+    setResearchError(
+      error instanceof Error
+        ? error.message
+        : 'Unable to load research resources.'
+    );
+  } finally {
+    setResearchLoading(false);
+  }
+};
+
   return (
     <div className="relative w-full rounded-3xl bg-white border border-[#DCEBEA] p-4 sm:p-7 shadow-xs">
       <div className="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-[#DCEBEA] text-xs">
@@ -197,6 +234,64 @@ export const PathwayDiagram: React.FC = () => {
               {availableNext.length === 0 && <p className="text-xs text-[#5E8085]">This is a leaf node in the current starter map. We can connect additional routes through the backend graph in the next step.</p>}
             </div>
           </div>
+          
+          <div className="mt-5 pt-4 border-t border-[#DCEBEA]">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h4 className="text-sm font-bold text-[#376E7D]">
+                Research this step
+              </h4>
+              <button
+                type="button"
+                onClick={researchSelectedStep}
+                disabled={researchLoading}
+                className="px-3 py-2 rounded-lg bg-[#367BA8] text-white text-xs font-semibold disabled:opacity-60"
+              >
+                {researchLoading ? 'Searching…' : 'Find resources'}
+              </button>
+            </div>
+
+            <p className="text-xs text-[#5E8085] mb-3">
+              Find articles, learning guides, and references related to this pathway.
+            </p>
+
+            {researchError && (
+              <p role="alert" className="text-xs text-red-600 mb-3">
+                {researchError}
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {researchResults.map((result) => (
+                <article
+                  key={result.url}
+                  className="p-3 rounded-xl border border-[#DCEBEA] bg-white"
+                >
+                  <a
+                    href={result.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-[#367BA8] hover:underline"
+                  >
+                    {result.title}
+                  </a>
+
+                  <p className="mt-1 text-xs text-[#5E8085] leading-relaxed">
+                    {result.content}
+                  </p>
+
+                  <a
+                    href={result.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-xs font-semibold text-[#278F89]"
+                  >
+                    Open resource ↗
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
+
           {notice && <p role="status" className="mt-3 text-[11px] text-[#278F89] flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" />{notice}</p>}
         </aside>
       </div>
