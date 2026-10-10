@@ -145,9 +145,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Right Column: Minimal CSS/SVG Pathway Diagram */}
+            {/* Right Column: Interactive Pathway Diagram Preview */}
             <div className="lg:col-span-6 w-full">
-              <PathwayDiagram />
+              <PathwayDiagram isEmbedded={true} />
             </div>
           </div>
         </div>

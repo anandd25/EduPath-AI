@@ -14,8 +14,8 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def _supabase_config() -> tuple[str, str]:
-    url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
-    anon_key = os.getenv("SUPABASE_ANON_KEY", "").strip()
+    url = (os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL") or "").strip().rstrip("/")
+    anon_key = (os.getenv("SUPABASE_ANON_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY") or "").strip()
 
     if not url or not anon_key:
         raise HTTPException(
@@ -24,6 +24,18 @@ def _supabase_config() -> tuple[str, str]:
         )
 
     return url, anon_key
+
+
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> dict[str, Any]:
+    """Return user info if token provided, or default guest dictionary."""
+    if credentials is None:
+        return {"id": "guest_student", "sub": "guest_student", "email": "student@edupath.ai", "user_metadata": {}}
+    try:
+        return get_current_user(credentials)
+    except Exception:
+        return {"id": "guest_student", "sub": "guest_student", "email": "student@edupath.ai", "user_metadata": {}}
 
 
 def get_current_user(

@@ -21,19 +21,23 @@ import {
   Heart,
   AlertCircle,
   Database,
-  CheckCircle2
+  CheckCircle2,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 
 interface FutureProfileProps {
   profile: StudentProfileOut;
   onEdit: () => void;
   onBackToHome: () => void;
+  onNavigate?: (route: string) => void;
 }
 
 export const FutureProfilePage: React.FC<FutureProfileProps> = ({
   profile,
   onEdit,
   onBackToHome,
+  onNavigate,
 }) => {
   const selectedInterestItems = INTEREST_OPTIONS.filter((i) =>
     profile.interests.includes(i.id)
@@ -64,6 +68,16 @@ export const FutureProfilePage: React.FC<FutureProfileProps> = ({
           </button>
 
           <div className="flex items-center gap-2.5">
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('/pathways')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-[#278F89] to-[#367BA8] hover:opacity-90 rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Explore Pathways</span>
+              </button>
+            )}
+
             <button
               onClick={onEdit}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-[#367BA8] bg-[#C9E6F8]/60 hover:bg-[#C9E6F8] border border-[#A7D9E6] rounded-xl transition-colors cursor-pointer"
@@ -418,23 +432,36 @@ export const FutureProfilePage: React.FC<FutureProfileProps> = ({
         </section>
 
         {/* 6. Next Step */}
-        <section className="bg-white border border-[#DCEBEA] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-4 print-clean">
+        <section className="bg-white border border-[#DCEBEA] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6 print-clean">
           <div className="flex items-center gap-2 text-[#367BA8] text-xs font-bold uppercase tracking-wider">
             <Sparkles className="w-4 h-4 text-[#278F89]" />
-            <span>Next Step</span>
+            <span>Next Step: Decision Engine</span>
           </div>
 
-          <h3 className="font-serif-heading text-xl font-bold text-[#376E7D] tracking-tight">
-            Your Future Profile is ready.
-          </h3>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 rounded-2xl bg-gradient-to-br from-[#EAF4FF] to-[#EDF8F5] border border-[#C9E6F8]">
+            <div className="space-y-2 max-w-xl">
+              <h3 className="font-serif-heading text-xl sm:text-2xl font-bold text-[#376E7D] tracking-tight">
+                Compare Complete Educational Pathways
+              </h3>
+              <p className="text-sm text-[#5E8085] leading-relaxed">
+                EduPath doesn't push you into a single rigid path. Evaluate <strong className="text-[#376E7D]">Path A (University Entrance)</strong>, <strong className="text-[#376E7D]">Path B (Polytechnic Diploma)</strong>, and <strong className="text-[#376E7D]">Path C (Vocational Route)</strong> side-by-side with verified fee timelines, cash-flow feasibility, what-if simulations, and preference learning.
+              </p>
+            </div>
 
-          <p className="text-sm text-[#5E8085] leading-relaxed max-w-3xl">
-            The next stage of EduPath will use these details to help you explore possible educational directions after Class 10.
-          </p>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('/pathways')}
+                className="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-bold text-white bg-[#367BA8] hover:bg-[#2e688e] rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+              >
+                <span>Explore & Compare Pathways</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#DCEBEA]">
             <span className="text-xs text-[#5E8085]">
-              No automated career recommendations have been forced upon your choices.
+              Deterministic feasibility validation enforces your financial budget and academic prerequisites.
             </span>
 
             <div className="flex items-center gap-3">

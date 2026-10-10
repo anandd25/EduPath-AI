@@ -271,3 +271,26 @@ class StudentPriority(Base):
     profile: Mapped["StudentProfile"] = relationship(
         back_populates="priorities",
     )
+
+
+class StudentPreferenceComparison(Base):
+    __tablename__ = "student_preference_comparisons"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    profile_id: Mapped[int | None] = mapped_column(
+        ForeignKey("student_profiles.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
+    )
+    owner_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    pathway_a_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    pathway_b_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    preferred_pathway_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    reasons: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    weights_snapshot: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+

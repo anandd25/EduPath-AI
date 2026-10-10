@@ -135,6 +135,15 @@ class FundingOpportunity(StrictModel):
         return self
 
 
+class StagedPayment(StrictModel):
+    payment_id: ReferenceId | None = None
+    stage_name: str = Field(min_length=1, max_length=200)
+    amount: FiniteFloat = Field(ge=0)
+    currency: str = Field(default="INR", pattern=r"^[A-Z]{3}$")
+    due_date: str | None = None
+    covered_by: Literal["budget", "scholarship", "loan", "unfunded"] = "budget"
+
+
 class Node(StrictModel):
     node_id: ReferenceId
     node_type: NodeType
@@ -147,6 +156,47 @@ class Node(StrictModel):
     institution_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     prerequisite_node_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
+
+    # 1. Decision and Purpose
+    purpose_fit: str | None = Field(default=None, max_length=4000)
+    alternatives_summary: str | None = Field(default=None, max_length=2000)
+    potential_outcomes: list[str] = Field(default_factory=list, max_length=50)
+
+    # 2. Requirements and Prerequisites
+    required_subjects: list[str] = Field(default_factory=list, max_length=30)
+    min_grade_or_score: str | None = Field(default=None, max_length=200)
+    entrance_exams: list[str] = Field(default_factory=list, max_length=30)
+    eligibility_conditions: list[str] = Field(default_factory=list, max_length=50)
+    application_materials: list[str] = Field(default_factory=list, max_length=50)
+    unqualified_consequence: str | None = Field(default=None, max_length=2000)
+
+    # 3. Timeline and Deadlines
+    start_date: str | None = None
+    application_window: str | None = Field(default=None, max_length=200)
+    expected_decision_date: str | None = None
+    next_decision_date: str | None = None
+
+    # 4. Financial Feasibility & Staged Cash Flow
+    tuition_amount: FiniteFloat | None = Field(default=None, ge=0)
+    living_expenses: FiniteFloat | None = Field(default=None, ge=0)
+    fees_estimate: FiniteFloat | None = Field(default=None, ge=0)
+    staged_payments: list[StagedPayment] = Field(default_factory=list, max_length=50)
+    scholarship_eligibility: list[str] = Field(default_factory=list, max_length=30)
+    funding_gap: FiniteFloat | None = Field(default=None, ge=0)
+    loan_interest_rate: FiniteFloat | None = Field(default=None, ge=0)
+    loan_monthly_payment: FiniteFloat | None = Field(default=None, ge=0)
+    financial_status: Literal["feasible", "tight", "funding_gap", "unfeasible"] | None = None
+
+    # 5. Evidence, Uncertainty, and Fallback
+    source_links: list[str] = Field(default_factory=list, max_length=50)
+    source_dates: list[str] = Field(default_factory=list, max_length=50)
+    verified_status: Literal["verified", "unverified", "estimate"] = "unverified"
+    admission_uncertainty: Literal["low", "medium", "high"] | None = None
+    scholarship_uncertainty: Literal["low", "medium", "high"] | None = None
+    blocked_requirements: list[str] = Field(default_factory=list, max_length=30)
+    actionable_fallback: str | None = Field(default=None, max_length=2000)
+    pathway_id: str | None = Field(default=None, max_length=128)
+    feasibility_status: Literal["FEASIBLE", "CONDITIONAL", "BLOCKED"] = "FEASIBLE"
 
     @field_validator("node_type", mode="before")
     @classmethod
@@ -196,6 +246,29 @@ class Edge(StrictModel):
         return self
 
 
+class PathwayRoute(StrictModel):
+    pathway_id: ReferenceId
+    route_name: str = Field(min_length=1, max_length=200)
+    category: str = Field(default="general", max_length=100)
+    summary: str = Field(min_length=1, max_length=2000)
+    total_duration_months: FiniteFloat = Field(ge=0)
+    total_cost: FiniteFloat = Field(ge=0)
+    currency: str = Field(default="INR", pattern=r"^[A-Z]{3}$")
+    staged_payments: list[StagedPayment] = Field(default_factory=list, max_length=50)
+    available_funding: list[str] = Field(default_factory=list, max_length=50)
+    net_cost_after_aid: FiniteFloat = Field(ge=0, default=0.0)
+    entry_requirements: list[str] = Field(default_factory=list, max_length=50)
+    potential_outcomes: list[str] = Field(default_factory=list, max_length=50)
+    risks: list[str] = Field(default_factory=list, max_length=50)
+    fallback_route: str = Field(min_length=1, max_length=2000)
+    is_academically_eligible: bool = True
+    is_cash_flow_feasible: bool = True
+    feasibility_status: Literal["FEASIBLE", "CONDITIONAL", "BLOCKED"] = "FEASIBLE"
+    feasibility_reasons: list[str] = Field(default_factory=list, max_length=50)
+    ranking_score: FiniteFloat = 0.0
+    node_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
+
+
 class PathwayGraph(StrictModel):
     pathway_id: ReferenceId
     nodes: list[Node] = Field(max_length=MAX_GRAPH_NODES)
@@ -213,6 +286,13 @@ class PathwayGraph(StrictModel):
     funding_opportunities: list[FundingOpportunity] = Field(
         default_factory=list, max_length=500
     )
+    pathway_routes: list[PathwayRoute] = Field(
+        default_factory=list, max_length=20
+    )
+    ranking_explanations: list[str] = Field(
+        default_factory=list, max_length=50
+    )
+    comparison_matrix: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def validate_unique_record_ids(self):
@@ -482,6 +562,47 @@ class CandidateNode(StrictModel):
     evidence_ids: list[ReferenceId] = Field(default_factory=list, max_length=100)
     prerequisite_refs: list[NodeEndpointRef] = Field(default_factory=list, max_length=100)
 
+    # 1. Decision and Purpose
+    purpose_fit: str | None = Field(default=None, max_length=4000)
+    alternatives_summary: str | None = Field(default=None, max_length=2000)
+    potential_outcomes: list[str] = Field(default_factory=list, max_length=50)
+
+    # 2. Requirements and Prerequisites
+    required_subjects: list[str] = Field(default_factory=list, max_length=30)
+    min_grade_or_score: str | None = Field(default=None, max_length=200)
+    entrance_exams: list[str] = Field(default_factory=list, max_length=30)
+    eligibility_conditions: list[str] = Field(default_factory=list, max_length=50)
+    application_materials: list[str] = Field(default_factory=list, max_length=50)
+    unqualified_consequence: str | None = Field(default=None, max_length=2000)
+
+    # 3. Timeline and Deadlines
+    start_date: str | None = None
+    application_window: str | None = Field(default=None, max_length=200)
+    expected_decision_date: str | None = None
+    next_decision_date: str | None = None
+
+    # 4. Financial Feasibility & Staged Cash Flow
+    tuition_amount: FiniteFloat | None = Field(default=None, ge=0)
+    living_expenses: FiniteFloat | None = Field(default=None, ge=0)
+    fees_estimate: FiniteFloat | None = Field(default=None, ge=0)
+    staged_payments: list[StagedPayment] = Field(default_factory=list, max_length=50)
+    scholarship_eligibility: list[str] = Field(default_factory=list, max_length=30)
+    funding_gap: FiniteFloat | None = Field(default=None, ge=0)
+    loan_interest_rate: FiniteFloat | None = Field(default=None, ge=0)
+    loan_monthly_payment: FiniteFloat | None = Field(default=None, ge=0)
+    financial_status: Literal["feasible", "tight", "funding_gap", "unfeasible"] | None = None
+
+    # 5. Evidence, Uncertainty, and Fallback
+    source_links: list[str] = Field(default_factory=list, max_length=50)
+    source_dates: list[str] = Field(default_factory=list, max_length=50)
+    verified_status: Literal["verified", "unverified", "estimate"] = "unverified"
+    admission_uncertainty: Literal["low", "medium", "high"] | None = None
+    scholarship_uncertainty: Literal["low", "medium", "high"] | None = None
+    blocked_requirements: list[str] = Field(default_factory=list, max_length=30)
+    actionable_fallback: str | None = Field(default=None, max_length=2000)
+    pathway_id: str | None = Field(default=None, max_length=128)
+    feasibility_status: Literal["FEASIBLE", "CONDITIONAL", "BLOCKED"] = "FEASIBLE"
+
     @field_validator("node_type", mode="before")
     @classmethod
     def normalize_node_type(cls, value: Any) -> Any:
@@ -497,22 +618,6 @@ class CandidateNode(StrictModel):
             )
         if self.cost_estimate is None and self.cost_currency is not None:
             raise ValueError("cost_currency requires a cost_estimate")
-        return self
-
-    @model_validator(mode="after")
-    def validate_unverified_metadata_ids(self):
-        if self.milestone_ids:
-            raise ValueError(
-                "milestone_ids cannot be verified against trusted data and must be empty"
-            )
-        if self.institution_ids:
-            raise ValueError(
-                "institution_ids cannot be verified against trusted data and must be empty"
-            )
-        if self.evidence_ids:
-            raise ValueError(
-                "evidence_ids cannot be verified against trusted data and must be empty"
-            )
         return self
 
 

@@ -96,6 +96,14 @@ export const Header: React.FC<HeaderProps> = ({
               Home
             </button>
             <button
+              onClick={() => handleLinkClick('/pathways')}
+              className={`hover:text-[#376E7D] transition-colors whitespace-nowrap cursor-pointer ${
+                currentRoute === '/pathways' ? 'text-[#367BA8] font-bold' : ''
+              }`}
+            >
+              Explore Pathways
+            </button>
+            <button
               onClick={() => handleNavClick('how-it-works')}
               className="hover:text-[#376E7D] transition-colors whitespace-nowrap cursor-pointer"
             >
@@ -209,6 +217,14 @@ export const Header: React.FC<HeaderProps> = ({
                 className="text-left px-3 py-2 rounded-lg hover:bg-[#F5FAF9] hover:text-[#376E7D]"
               >
                 Home
+              </button>
+              <button
+                onClick={() => handleLinkClick('/pathways')}
+                className={`text-left px-3 py-2 rounded-lg hover:bg-[#F5FAF9] hover:text-[#376E7D] ${
+                  currentRoute === '/pathways' ? 'text-[#367BA8] font-bold bg-[#EAF4FF]' : ''
+                }`}
+              >
+                Explore Pathways
               </button>
               <button
                 onClick={() => handleNavClick('how-it-works')}

@@ -17,8 +17,9 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { StudentProfileWizard } from './pages/StudentProfileWizard';
 import { FutureProfilePage } from './pages/FutureProfilePage';
+import { PathwayDiagram } from './components/PathwayDiagram';
 
-type AppRoute = '/' | '/login' | '/register' | '/wizard' | '/profile';
+type AppRoute = '/' | '/login' | '/register' | '/wizard' | '/profile' | '/pathways';
 
 function EduPathApp() {
   const { user, loading, isAuthenticated, signOut } = useAuth();
@@ -40,6 +41,7 @@ function EduPathApp() {
     if (rawHash === '/register' || rawHash === 'register') return '/register';
     if (rawHash === '/wizard' || rawHash === 'wizard') return '/wizard';
     if (rawHash === '/profile' || rawHash === 'profile') return '/profile';
+    if (rawHash === '/pathways' || rawHash === 'pathways') return '/pathways';
     return '/';
   });
 
@@ -64,7 +66,8 @@ function EduPathApp() {
       normalized === '/login' ||
       normalized === '/register' ||
       normalized === '/wizard' ||
-      normalized === '/profile'
+      normalized === '/profile' ||
+      normalized === '/pathways'
     ) {
       setCurrentRoute(normalized as AppRoute);
     } else {
@@ -92,6 +95,8 @@ function EduPathApp() {
         setCurrentRoute('/login');
       } else if (hash === '/register' || hash === 'register') {
         setCurrentRoute('/register');
+      } else if (hash === '/pathways' || hash === 'pathways') {
+        setCurrentRoute('/pathways');
       } else {
         setCurrentRoute('/');
       }
@@ -260,6 +265,7 @@ function EduPathApp() {
                 profile={confirmedProfile}
                 onEdit={() => handleNavigate('/wizard')}
                 onBackToHome={() => handleNavigate('/')}
+                onNavigate={handleNavigate}
               />
             ) : (
               <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
@@ -278,6 +284,16 @@ function EduPathApp() {
               </div>
             )}
           </ProtectedRoute>
+        )}
+
+        {/* Multi-Pathway Decision Engine & Comparison View */}
+        {currentRoute === '/pathways' && (
+          <div className="w-full">
+            <PathwayDiagram
+              studentProfile={confirmedProfile || draftProfile}
+              onBack={() => handleNavigate(confirmedProfile ? '/profile' : '/')}
+            />
+          </div>
         )}
       </main>
 

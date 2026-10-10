@@ -181,6 +181,9 @@ export const apiService = {
    * not accept a profile_id-only payload. Keep graph values generic here so the
    * UI can adapt to the backend's graph schema without silently discarding data.
    */
+  /**
+   * Generate or expand a pathway graph (POST /api/pathways).
+   */
   async getPathways(
     studentProfileSnapshot: StudentProfileCreate | StudentProfileOut,
     options: {
@@ -190,13 +193,6 @@ export const apiService = {
       generationIntent?: string;
     } = {},
   ): Promise<Record<string, unknown>> {
-    if (!currentAuthToken) {
-      throw {
-        message: 'Please sign in before generating your pathway.',
-        statusCode: 401,
-      } satisfies ApiError;
-    }
-
     const res = await fetch(`${API_BASE}/api/pathways`, {
       method: 'POST',
       headers: getRequestHeaders({
@@ -206,8 +202,8 @@ export const apiService = {
         student_profile_snapshot: studentProfileSnapshot,
         current_graph: options.currentGraph ?? null,
         current_node_ids_to_expand: options.currentNodeIdsToExpand ?? [],
-        candidate_node_count: options.candidateNodeCount ?? 4,
-        generation_intent: options.generationIntent ?? 'initial',
+        candidate_node_count: options.candidateNodeCount ?? 12,
+        generation_intent: options.generationIntent ?? 'continue',
       }),
     });
 
@@ -219,7 +215,79 @@ export const apiService = {
   },
 
   /**
-   * What-If Scenario Simulations Stub (POST /api/scenarios)
+   * Compare complete candidate pathways side-by-side (POST /api/pathways/compare)
+   */
+  async comparePathways(
+    studentProfileSnapshot: StudentProfileCreate | StudentProfileOut,
+  ): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/pathways/compare`, {
+      method: 'POST',
+      headers: getRequestHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        student_profile_snapshot: studentProfileSnapshot,
+      }),
+    });
+
+    if (!res.ok) {
+      throw await parseErrorResponse(res);
+    }
+
+    return res.json();
+  },
+
+  /**
+   * Submit pairwise preference comparison (POST /api/preferences/compare)
+   */
+  async submitPreferenceComparison(payload: {
+    student_profile_snapshot: StudentProfileCreate | StudentProfileOut;
+    pathway_a_id: string;
+    pathway_b_id: string;
+    preferred_pathway_id: string;
+    reasons: string[];
+    current_weights?: Record<string, number>;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/preferences/compare`, {
+      method: 'POST',
+      headers: getRequestHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw await parseErrorResponse(res);
+    }
+
+    return res.json();
+  },
+
+  /**
+   * Retrieve student's preference history and active weights (POST /api/preferences/history)
+   */
+  async getPreferenceHistory(
+    studentProfileSnapshot: StudentProfileCreate | StudentProfileOut,
+  ): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/preferences/history`, {
+      method: 'POST',
+      headers: getRequestHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        student_profile_snapshot: studentProfileSnapshot,
+      }),
+    });
+
+    if (!res.ok) {
+      throw await parseErrorResponse(res);
+    }
+
+    return res.json();
+  },
+
+  /**
+   * Simulate What-If Scenarios (POST /api/scenarios)
    */
   async simulateScenario(payload: any): Promise<any> {
     const res = await fetch(`${API_BASE}/api/scenarios`, {

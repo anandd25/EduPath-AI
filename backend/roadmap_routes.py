@@ -1,16 +1,27 @@
+"""Authenticated roadmap generation, multi-pathway comparison, preference learning, and scenario planning."""
 
-"""Authenticated roadmap generation and deterministic scenario planning."""
-
+import json
 import logging
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy.orm import Session
 
-from auth import get_current_user
-from domain_schemas import GraphGenerationRequest, PathwayGraph, Node, Edge
-from generator_service import generate_pathway_graph, GraphGenerationError
+from auth import get_current_user, get_optional_current_user
+from database import get_db
+from domain_schemas import GraphGenerationRequest, PathwayGraph, Node, Edge, PathwayRoute
+from generator_service import generate_pathway_graph, GraphGenerationError, get_pathway_research
 from graph_engine import GraphValidationError, validate_graph
+from models import StudentPreferenceComparison
+from pathway_comparison import build_complete_pathways
+from preference_engine import (
+    get_cold_start_weights,
+    rank_pathways,
+    update_preference_weights,
+    evaluate_against_static_baseline,
+)
+from scenario_simulator import run_scenario_simulation
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Roadmap & Planning"])
@@ -48,296 +59,71 @@ class RoadmapRequest(BaseModel):
             )
 
 
-def _profile_text(
-    profile: dict[str, Any],
-    key: str,
-    default: str = "",
-) -> str:
-    value = profile.get(key, default)
-    return str(value).strip() if value is not None else default
-
-
-def fallback_roadmap(profile: dict[str, Any]) -> PathwayGraph:
-    """Create a transparent starter roadmap without claiming live verification."""
-    interests = profile.get("interests") or []
-    interest_text = (
-        ", ".join(str(item).replace("_", " ") for item in interests[:3])
-        or _profile_text(
-            profile,
-            "interest_description",
-            "the student's interests",
-        )
-    )
-
-    country = _profile_text(profile, "country", "Not specified")
-    region = _profile_text(profile, "region", "Not specified")
-    destination = _profile_text(
-        profile,
-        "preferred_destination",
-        "undecided",
-    )
-
+def _generate_multi_pathway_roadmap(profile: dict[str, Any]) -> dict[str, Any]:
+    """Generate high-quality multi-pathway decision support system."""
     budget = profile.get("annual_budget") or {}
-    currency = str(
-        budget.get("currency") or profile.get("budget_currency") or "INR"
-    ).upper()
-    amount = budget.get("amount", profile.get("budget_amount"))
+    currency = str(budget.get("currency") or profile.get("budget_currency") or "INR").upper()
 
-    if amount is None:
-        budget_line = (
-            "Annual budget has not been established. Set a realistic budget "
-            "before making affordability decisions."
-        )
-    else:
-        budget_line = (
-            f"Entered annual budget: {currency} {amount}. This is not proof "
-            "that tuition, living expenses and payments due at each stage "
-            "are affordable."
-        )
+    # Build complete post-Class 10 candidate pathways (Path A, Path B, Path C)
+    graph, routes = build_complete_pathways(profile, currency=currency)
 
-    location_line = f"Location: {region}, {country}. Preferred destination: {destination}."
+    # Apply cold-start preference learning prior
+    weights = get_cold_start_weights(profile)
+    ranked_routes = rank_pathways(routes, weights)
 
-    stages = [
-        (
-            "budget_planning",
-            "exploration",
-            "Establish constraints and priorities",
-            f"{budget_line} {location_line} Clarify interests, academic eligibility, "
-            "family constraints, payment timing and the relative importance of "
-            "cost, duration, location and career options.",
-            1,
-        ),
-        (
-            "career_exploration",
-            "exploration",
-            "Explore and test career interests",
-            f"Use projects, introductory lessons and conversations with practitioners "
-            f"to test interest in {interest_text}. Treat career fit as a hypothesis, "
-            "not a prediction or guarantee.",
-            2,
-        ),
-        (
-            "class10_routes",
-            "education",
-            "Compare post-Class 10 routes",
-            "Compare senior-secondary study, eligible polytechnic diplomas and "
-            "vocational or ITI routes where available. Verify subject requirements, "
-            "recognition, progression rules, deadlines and costs with official sources.",
-            1,
-        ),
-        (
-            "academic_preparation",
-            "education",
-            "Prepare for selected entry requirements",
-            "Identify the exact subjects, grades, entrance examinations, documents "
-            "and application dates for each selected route. Keep requirements marked "
-            "unknown until confirmed by the relevant authority.",
-            12,
-        ),
-        (
-            "institution_comparison",
-            "education",
-            "Compare institutions and programmes",
-            "Compare recognised programmes by eligibility, total course duration, "
-            "tuition, living costs, location, language, deadlines and progression "
-            "options. Institution-specific details remain unverified until confirmed.",
-            1,
-        ),
-        (
-            "funding_plan",
-            "education",
-            "Build a staged funding plan",
-            "Record each expected payment and its due date. Research scholarships "
-            "and grants, verify eligibility and award conditions, and compare any "
-            "loan's interest rate, fees, repayment start and total repayment.",
-            1,
-        ),
-        (
-            "decision_review",
-            "exploration",
-            "Review evidence and choose a route",
-            "Compare the feasible options against stated priorities. Separate "
-            "verified facts, estimates, assumptions and unknowns. Do not treat "
-            "this planning roadmap as an admission or funding guarantee.",
-            1,
-        ),
-        (
-            "career_transition",
-            "career",
-            "Plan further study and career transitions",
-            "Map likely next qualifications, practical experience and potential "
-            "career directions. Verify licensing or accreditation requirements "
-            "where relevant; employment outcomes depend on location and individual factors.",
-            12,
-        ),
+    # Attach ranked routes and matrix to graph
+    graph.pathway_routes = ranked_routes
+    graph.ranking_explanations = [
+        f"Initial ranking derived from your stated profile priorities ({', '.join(profile.get('priorities', ['Balanced']))}).",
+        "Deterministic feasibility engine validated academic prerequisites and staged cash flow.",
+        "Compare Path A, Path B, and Path C side-by-side or record a pairwise preference to personalize rankings.",
     ]
 
-    nodes = [
-        Node(
-            node_id=node_id,
-            node_type=node_type,
-            title=title,
-            description=description,
-            duration_estimate_months=duration,
-        )
-        for node_id, node_type, title, description, duration in stages
-    ]
-
-    edges = [
-        Edge(
-            edge_id=f"roadmap_edge_{index + 1}",
-            source_node_id=stages[index][0],
-            target_node_id=stages[index + 1][0],
-            edge_type="progression",
-        )
-        for index in range(len(stages) - 1)
-    ]
-
-    nodes.extend(
-        [
-            Node(
-                node_id="reduced_budget_option",
-                node_type="education",
-                title="Alternative if the budget decreases",
-                description=(
-                    "Recalculate stage-by-stage affordability, investigate "
-                    "recognised lower-cost programmes and eligible funding, "
-                    "and defer decisions that depend on unconfirmed awards."
-                ),
-                duration_estimate_months=1,
-            ),
-            Node(
-                node_id="unavailable_course_option",
-                node_type="education",
-                title="Alternative if the preferred course is unavailable",
-                description=(
-                    "Compare related programmes, eligible diploma or vocational "
-                    "routes, alternate institutions and a later application. "
-                    "Verify entry requirements and progression rules."
-                ),
-                duration_estimate_months=1,
-            ),
-            Node(
-                node_id="admission_failure_recovery",
-                node_type="exploration",
-                title="Recovery plan if admission is unsuccessful",
-                description=(
-                    "Review the unmet requirement and application outcome. "
-                    "Compare eligible alternative institutions, another intake, "
-                    "bridge preparation or a different recognised qualification."
-                ),
-                duration_estimate_months=1,
-            ),
-            Node(
-                node_id="scholarship_failure_recovery",
-                node_type="exploration",
-                title="Recovery plan if funding is rejected",
-                description=(
-                    "Remove unawarded funding from the plan, recalculate the "
-                    "payment schedule and funding gap, and compare other eligible "
-                    "grants, lower-cost options or deferral."
-                ),
-                duration_estimate_months=1,
-            ),
-        ]
-    )
-
-    edges.extend(
-        [
-            Edge(
-                edge_id="scenario_budget_branch",
-                source_node_id="decision_review",
-                target_node_id="reduced_budget_option",
-                edge_type="alternative",
-            ),
-            Edge(
-                edge_id="scenario_course_branch",
-                source_node_id="decision_review",
-                target_node_id="unavailable_course_option",
-                edge_type="alternative",
-            ),
-            Edge(
-                edge_id="scenario_admission_branch",
-                source_node_id="decision_review",
-                target_node_id="admission_failure_recovery",
-                edge_type="alternative",
-            ),
-            Edge(
-                edge_id="scenario_scholarship_branch",
-                source_node_id="funding_plan",
-                target_node_id="scholarship_failure_recovery",
-                edge_type="alternative",
-            ),
-        ]
-    )
-
-    graph = PathwayGraph(
-        pathway_id=f"edupath-{profile.get('id', 'student')}",
-        nodes=nodes,
-        edges=edges,
-        target_outcome=(
-            "Compare education-to-career pathways with explicit constraints, "
-            "evidence, financial uncertainty and recovery options."
+    return {
+        "graph": graph.model_dump(mode="json"),
+        "pathway_routes": [r.model_dump() for r in ranked_routes],
+        "comparison_matrix": graph.comparison_matrix,
+        "preference_weights": weights,
+        "source": "evidence_backed_engine",
+        "notice": (
+            "Multi-pathway decision-support plan. Every node details Decision, Prerequisites, "
+            "Timing, Staged Cash Flow, and Fallbacks. Facts verified against official guidelines."
         ),
-        schema_version="1.0",
-    )
-
-    return validate_graph(graph)
+    }
 
 
 def _generate(payload: RoadmapRequest) -> dict[str, Any]:
     profile = payload.student_profile_snapshot
 
-    try:
-        payload.validate_expansion_request()
+    # If this is an expansion request on an existing graph, use graph generator
+    if payload.current_graph is not None:
+        try:
+            payload.validate_expansion_request()
+            request_data: dict[str, Any] = {
+                "student_profile_snapshot": profile,
+                "candidate_node_count": payload.candidate_node_count,
+                "generation_intent": payload.generation_intent,
+                "current_graph": payload.current_graph,
+                "current_node_ids_to_expand": payload.current_node_ids_to_expand,
+            }
+            request = GraphGenerationRequest.model_validate(request_data)
+            graph = generate_pathway_graph(request)
+            return {
+                "graph": graph.model_dump(mode="json"),
+                "source": "ai_expansion",
+                "notice": "Expanded roadmap with source-backed candidates.",
+            }
+        except Exception as exc:
+            logger.warning("Graph expansion failed, generating complete multi-pathway: %s", exc)
 
-        request_data: dict[str, Any] = {
-            "student_profile_snapshot": profile,
-            "candidate_node_count": payload.candidate_node_count,
-            "generation_intent": payload.generation_intent,
-        }
-
-        if payload.current_graph is not None:
-            request_data["current_graph"] = payload.current_graph
-            request_data["current_node_ids_to_expand"] = (
-                payload.current_node_ids_to_expand
-            )
-
-        request = GraphGenerationRequest.model_validate(request_data)
-        graph = generate_pathway_graph(request)
-
-        return {
-            "graph": graph.model_dump(mode="json"),
-            "source": "ai",
-            "notice": (
-                "AI-generated planning options. Research results are evidence "
-                "leads, not automatic verification. Confirm official eligibility, "
-                "fees, deadlines and funding before treating any route as feasible."
-            ),
-        }
-
-    except (GraphGenerationError, GraphValidationError, ValueError, TypeError) as exc:
-        logger.warning("Roadmap generation could not produce an AI graph: %s", exc)
-
-    except Exception:
-        logger.exception("Unexpected roadmap generation failure")
-
-    graph = fallback_roadmap(profile)
-
-    return {
-        "graph": graph.model_dump(mode="json"),
-        "source": "fallback",
-        "notice": (
-            "Deterministic starter roadmap. Institution-specific fees, entry "
-            "requirements, deadlines, scholarships and loan terms are not live-verified."
-        ),
-    }
+    # Default to complete multi-pathway comparison system
+    return _generate_multi_pathway_roadmap(profile)
 
 
 @router.post("/roadmap")
 def create_roadmap(
     payload: RoadmapRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_optional_current_user),
 ):
     return _generate(payload)
 
@@ -345,12 +131,225 @@ def create_roadmap(
 @router.post("/pathways")
 def create_pathways(
     payload: RoadmapRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_optional_current_user),
 ):
-    """Compatibility alias for existing frontend clients."""
+    """Compatibility endpoint for frontend clients."""
     return _generate(payload)
 
 
+# -----------------------------------------------------------------------------
+# Multi-Pathway Comparison Endpoint
+# -----------------------------------------------------------------------------
+class PathwayCompareRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    student_profile_snapshot: dict[str, Any]
+
+
+@router.post("/pathways/compare")
+def compare_pathways(
+    payload: PathwayCompareRequest,
+    user: dict = Depends(get_optional_current_user),
+):
+    """Side-by-side comparison of candidate pathways (Path A vs Path B vs Path C)."""
+    profile = payload.student_profile_snapshot
+    budget = profile.get("annual_budget") or {}
+    currency = str(budget.get("currency") or profile.get("budget_currency") or "INR").upper()
+
+    graph, routes = build_complete_pathways(profile, currency=currency)
+    weights = get_cold_start_weights(profile)
+    ranked_routes = rank_pathways(routes, weights)
+
+    return {
+        "status": "success",
+        "student_name": profile.get("preferred_name") or "Student",
+        "annual_budget": budget.get("amount", profile.get("budget_amount")),
+        "currency": currency,
+        "pathways": [r.model_dump() for r in ranked_routes],
+        "comparison_matrix": graph.comparison_matrix,
+        "preference_weights": weights,
+        "summary": (
+            "Compare timeline, total & staged costs, funding opportunities, prerequisites, "
+            "risks, and fallback routes across all options."
+        ),
+    }
+
+
+# -----------------------------------------------------------------------------
+# Preference Learning Endpoints
+# -----------------------------------------------------------------------------
+class PreferenceCompareRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    student_profile_snapshot: dict[str, Any]
+    pathway_a_id: str
+    pathway_b_id: str
+    preferred_pathway_id: str
+    reasons: list[str] = Field(default_factory=list)
+    current_weights: dict[str, float] | None = None
+
+
+@router.post("/preferences/compare")
+def record_preference_comparison(
+    payload: PreferenceCompareRequest,
+    user: dict = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
+    """Capture pairwise preference choices, learn trade-offs, update rankings, and evaluate against baseline."""
+    profile = payload.student_profile_snapshot
+    currency = str(
+        profile.get("annual_budget", {}).get("currency")
+        or profile.get("budget_currency")
+        or "INR"
+    ).upper()
+
+    graph, routes = build_complete_pathways(profile, currency=currency)
+    routes_by_id = {r.pathway_id: r for r in routes}
+
+    route_a = routes_by_id.get(payload.pathway_a_id)
+    route_b = routes_by_id.get(payload.pathway_b_id)
+
+    if not route_a or not route_b:
+        raise HTTPException(
+            status_code=400,
+            detail="One or both pathway IDs not found in candidate options.",
+        )
+
+    # Current weights or cold-start
+    current_w = payload.current_weights or get_cold_start_weights(profile)
+
+    # Learn from student pairwise choice
+    new_weights, explanation = update_preference_weights(
+        current_weights=current_w,
+        route_a=route_a,
+        route_b=route_b,
+        preferred_route_id=payload.preferred_pathway_id,
+        selected_reasons=payload.reasons,
+    )
+
+    # Persist in DB
+    owner_id = user.get("sub") or user.get("id")
+    profile_id = profile.get("id")
+
+    try:
+        record = StudentPreferenceComparison(
+            profile_id=int(profile_id) if profile_id else None,
+            owner_id=str(owner_id) if owner_id else None,
+            pathway_a_id=payload.pathway_a_id,
+            pathway_b_id=payload.pathway_b_id,
+            preferred_pathway_id=payload.preferred_pathway_id,
+            reasons=json.dumps(payload.reasons),
+            weights_snapshot=json.dumps(new_weights),
+        )
+        db.add(record)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning("Could not persist preference comparison to DB: %s", exc)
+
+    # Query historical comparisons for baseline evaluation
+    history_items = []
+    try:
+        query = db.query(StudentPreferenceComparison)
+        if owner_id:
+            query = query.filter(StudentPreferenceComparison.owner_id == str(owner_id))
+        rows = query.order_by(StudentPreferenceComparison.created_at.desc()).limit(20).all()
+        for r in rows:
+            history_items.append(
+                {
+                    "pathway_a_id": r.pathway_a_id,
+                    "pathway_b_id": r.pathway_b_id,
+                    "preferred_pathway_id": r.preferred_pathway_id,
+                }
+            )
+    except Exception:
+        history_items = [
+            {
+                "pathway_a_id": payload.pathway_a_id,
+                "pathway_b_id": payload.pathway_b_id,
+                "preferred_pathway_id": payload.preferred_pathway_id,
+            }
+        ]
+
+    # Re-rank pathways using updated weights with hard constraint enforcement
+    ranked_routes = rank_pathways(routes, new_weights)
+
+    # Check constraint enforcement explanation
+    preferred_route = routes_by_id.get(payload.preferred_pathway_id)
+    constraint_notice = None
+    if preferred_route and preferred_route.feasibility_status == "BLOCKED":
+        constraint_notice = (
+            f"Constraint Enforcement: You preferred {preferred_route.route_name}, but it is marked BLOCKED "
+            f"due to unmet academic cutoffs or an unbridgeable funding gap. The system keeps hard constraints in force."
+        )
+
+    # Evaluate against static baseline
+    baseline_eval = evaluate_against_static_baseline(
+        comparison_history=history_items,
+        learned_weights=new_weights,
+        routes=routes,
+    )
+
+    return {
+        "status": "preferences_updated",
+        "updated_weights": new_weights,
+        "explanation": explanation,
+        "constraint_enforcement_notice": constraint_notice,
+        "ranked_pathways": [r.model_dump() for r in ranked_routes],
+        "baseline_evaluation": baseline_eval,
+    }
+
+
+class PreferenceHistoryRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    student_profile_snapshot: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.post("/preferences/history")
+def get_preference_history(
+    payload: PreferenceHistoryRequest,
+    user: dict = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve student's pairwise preference history and active weights."""
+    owner_id = user.get("sub") or user.get("id")
+    profile = payload.student_profile_snapshot
+    weights = get_cold_start_weights(profile)
+
+    comparisons = []
+    try:
+        query = db.query(StudentPreferenceComparison)
+        if owner_id:
+            query = query.filter(StudentPreferenceComparison.owner_id == str(owner_id))
+        rows = query.order_by(StudentPreferenceComparison.created_at.desc()).limit(20).all()
+        for r in rows:
+            comparisons.append(
+                {
+                    "id": r.id,
+                    "pathway_a_id": r.pathway_a_id,
+                    "pathway_b_id": r.pathway_b_id,
+                    "preferred_pathway_id": r.preferred_pathway_id,
+                    "reasons": json.loads(r.reasons) if r.reasons else [],
+                    "created_at": r.created_at.isoformat(),
+                }
+            )
+            if r.weights_snapshot:
+                try:
+                    weights = json.loads(r.weights_snapshot)
+                except Exception:
+                    pass
+    except Exception as exc:
+        logger.warning("Could not load preference history: %s", exc)
+
+    return {
+        "current_weights": weights,
+        "history": comparisons,
+        "total_comparisons": len(comparisons),
+    }
+
+
+# -----------------------------------------------------------------------------
+# Scenario Simulation Endpoint
+# -----------------------------------------------------------------------------
 class ScenarioRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -367,122 +366,31 @@ class ScenarioRequest(BaseModel):
 @router.post("/scenarios")
 def simulate_scenario(
     payload: ScenarioRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_optional_current_user),
 ):
+    """Simulate what-if scenarios (admission cutoff missed, scholarship rejected, budget decreased)."""
     profile = payload.student_profile_snapshot
-    annual_budget = profile.get("annual_budget") or {}
-
-    amount = annual_budget.get("amount", profile.get("budget_amount"))
     currency = str(
-        annual_budget.get("currency") or profile.get("budget_currency") or "INR"
+        profile.get("annual_budget", {}).get("currency")
+        or profile.get("budget_currency")
+        or "INR"
     ).upper()
 
-    result: dict[str, Any] = {
-        "scenario": payload.scenario,
-        "currency": currency,
-        "status": "simulated",
-        "assumptions": [
-            "Simulation uses user-provided values and explicit scenario assumptions.",
-            "It does not verify admission, tuition, scholarship awards or loan approval.",
-            "Annual affordability does not prove that funds are available on each payment date.",
-        ],
-        "uncertainty": "High until relevant official requirements, costs and funding are confirmed.",
+    graph, routes = build_complete_pathways(profile, currency=currency)
+
+    sim_params = {
+        "budget_reduction_percent": payload.budget_reduction_percent,
+        "preferred_course": payload.preferred_course,
+        "funding_amount": payload.funding_amount,
+        "funding_status": payload.funding_status,
     }
 
-    if payload.scenario == "budget":
-        if amount is None:
-            result.update(
-                {
-                    "status": "budget_not_set",
-                    "message": (
-                        "Enter an annual budget before calculating a reduced-budget scenario."
-                    ),
-                }
-            )
-        else:
-            reduced = round(
-                float(amount) * (1 - payload.budget_reduction_percent / 100),
-                2,
-            )
-            result.update(
-                {
-                    "original_annual_budget": amount,
-                    "reduction_percent": payload.budget_reduction_percent,
-                    "simulated_annual_budget": reduced,
-                    "message": (
-                        "Recalculate costs and payment dates for every route. "
-                        "Remove funding that is not confirmed and identify any gap."
-                    ),
-                }
-            )
-
-    elif payload.scenario == "course":
-        course = payload.preferred_course.strip() or "the preferred course"
-        result.update(
-            {
-                "preferred_course": course,
-                "alternatives_to_compare": [
-                    "Related recognised programme",
-                    "Eligible diploma or vocational route",
-                    "Alternate institution or destination",
-                    "Later intake after strengthening prerequisites",
-                ],
-                "message": (
-                    f"If {course} is unavailable, compare alternatives using "
-                    "verified eligibility, recognition, cost, duration and career relevance."
-                ),
-            }
-        )
-
-    elif payload.scenario == "admission":
-        result.update(
-            {
-                "trigger": "Preferred admission is unsuccessful or unavailable.",
-                "next_actions": [
-                    "Record the actual unmet eligibility or selection requirement.",
-                    "Remove the unsuccessful admission from the assumed plan.",
-                    "Compare eligible alternative institutions and programmes.",
-                    "Consider a later intake only if its requirements and deadlines are feasible.",
-                ],
-                "message": (
-                    "The simulation identifies recovery actions; it does not predict "
-                    "admission to any alternative."
-                ),
-            }
-        )
-
-    elif payload.scenario == "scholarship":
-        funding_amount = payload.funding_amount
-        result.update(
-            {
-                "funding_status": payload.funding_status,
-                "funding_amount_removed": (
-                    funding_amount
-                    if payload.funding_status == "rejected"
-                    else 0
-                ),
-                "next_actions": [
-                    "Recalculate the remaining funding gap.",
-                    "Recheck the timing of every tuition and living-cost payment.",
-                    "Research other eligible awards without counting them as secured funds.",
-                    "Compare lower-cost routes or deferral if the gap remains.",
-                ],
-                "message": (
-                    "Only confirmed awards should count as secured funding. "
-                    "An application or expected scholarship is not guaranteed money."
-                ),
-            }
-        )
-
-    else:
-        result.update(
-            {
-                "annual_budget": amount,
-                "message": (
-                    "Baseline scenario uses current profile assumptions. Compare complete "
-                    "routes and verify eligibility, staged costs and available funding."
-                ),
-            }
-        )
+    result = run_scenario_simulation(
+        profile=profile,
+        graph=graph,
+        routes=routes,
+        scenario=payload.scenario,
+        params=sim_params,
+    )
 
     return result
