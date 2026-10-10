@@ -1,18 +1,32 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from database import Base, engine
 from profile_routes import router as profile_router
 from roadmap_routes import router as roadmap_router
 
-Base.metadata.create_all(bind=engine)  # Use Alembic migrations for production.
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="EduPath Student Profile API", version="1.0.0")
-origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
-if os.getenv("FRONTEND_ORIGIN"):
-    origins.append(os.environ["FRONTEND_ORIGIN"].rstrip("/"))
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True,
-                   allow_methods=["*"], allow_headers=["*"])
+
+frontend_origin = os.getenv(
+    "FRONTEND_ORIGIN",
+    "https://edu-path-ai-seven.vercel.app"
+).strip().rstrip("/")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        frontend_origin,
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(profile_router, prefix="/api")
 app.include_router(roadmap_router, prefix="/api")
 
