@@ -1,51 +1,35 @@
-# PathPilot Backend
+# EduPath Student Profile API
 
-FastAPI + LangChain + Groq backend corresponding to the React frontend.
+FastAPI + SQLAlchemy starter for the EduPath Class 10 student profile schema.
 
-## 1. Create environment
-Python 3.10+ recommended.
+## Run locally
 
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+# Windows PowerShell:
+.venv\\Scripts\\Activate.ps1
+# macOS/Linux:
+# source .venv/bin/activate
 pip install -r requirements.txt
+# Optional: copy .env.example to .env and configure DATABASE_URL
+uvicorn main:app --reload
 ```
 
-## 2. Configure Groq
+Open http://127.0.0.1:8000/docs.
 
-Copy `.env.example` to `.env` and add:
+By default, local development uses SQLite and creates `edupath.db`. Set `DATABASE_URL` in the environment to use PostgreSQL, for example:
 
-```env
-GROQ_API_KEY=your_key
-GROQ_MODEL=llama-3.3-70b-versatile
-FRONTEND_ORIGIN=http://localhost:5173
-```
+`postgresql+psycopg://USER:PASSWORD@HOST:5432/DATABASE`
 
-If `GROQ_API_KEY` is empty, the backend automatically uses deterministic fallback pathway/scenario data, so the frontend can still be developed locally.
+## Routes
 
-## 3. Run
+- `POST /api/profiles` — create
+- `GET /api/profiles` — list
+- `GET /api/profiles/{id}` — retrieve
+- `PUT /api/profiles/{id}` — replace/update
+- `DELETE /api/profiles/{id}` — delete
+- `GET /health` — health check
 
-```bash
-uvicorn app.main:app --reload --port 8000
-```
+## Production notes
 
-API:
-- `GET /health`
-- `POST /api/pathways`
-- `POST /api/scenarios`
-
-Swagger UI: `http://localhost:8000/docs`
-
-## Architecture
-
-React/Vite
-  -> FastAPI
-    -> Pydantic validation
-    -> LangChain prompt + structured output
-    -> Groq model
-    -> transparent PathwayResponse / ScenarioResponse
-    -> fallback engine if Groq is unavailable
-
-Important production extension:
-Live institution, scholarship, admissions, visa and loan data should come from verified/current providers or official sources rather than being invented by the LLM. The API deliberately labels assumptions and uncertainty.
+`Base.metadata.create_all()` is for a starter project; use Alembic migrations for production schema changes. Add authentication and per-user authorization before exposing profile records publicly. Keep database credentials in deployment environment variables. The submitted `interest_description` is stored without AI rewriting.
