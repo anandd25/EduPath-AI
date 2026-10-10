@@ -1,27 +1,15 @@
-import tailwindcss from '@tailwindcss/vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+// Only expose the three explicitly approved browser settings. Do not use envPrefix: ''.
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), tailwindcss()],
-    // Preserve the existing Vercel variable names while exposing only the public Supabase values to the browser bundle.
+    plugins: [react()],
     define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL || ''),
-      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY || ''),
-    },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
-    },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
-    },
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || env.VITE_SUPABASE_URL || ''),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY || ''),
+      'import.meta.env.VITE_API_BASE': JSON.stringify(env.VITE_API_BASE || 'http://localhost:8000')
+    }
   };
 });

@@ -1,20 +1,17 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# EduPath AI frontend
 
-# Run and deploy your AI Studio app
+Dark, neon-gradient React/Vite UI with animated login, profile collection and career roadmap nodes.
 
-This contains everything you need to run your app locally.
+## Run locally
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-View your app in AI Studio: https://ai.studio/apps/d875f6f7-5b19-446a-bf8d-ef6e75cf742c
+Vite config explicitly maps only `SUPABASE_URL` and `SUPABASE_ANON_KEY` to the frontend Supabase client, preserving your current deployment variable names. Only use the public anon/publishable key here, never the service-role key. `VITE_API_BASE` points to the FastAPI service.
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Deploy
+- Vercel frontend environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `VITE_API_BASE`.
+- Render backend environment variables: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FRONTEND_ORIGIN`, and optionally `GROQ_API_KEY`.
+- Redeploy after changing environment variables.

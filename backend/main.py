@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
 from profile_routes import router as profile_router
+from roadmap_routes import router as roadmap_router
 
 # Creates missing tables. Existing deployments get a safe additive owner_id migration below.
 Base.metadata.create_all(bind=engine)
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept", "apikey"],
 )
 app.include_router(profile_router, prefix="/api")
+app.include_router(roadmap_router, prefix="/api")
 
 @app.get("/")
 def root():
