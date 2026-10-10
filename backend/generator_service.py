@@ -202,11 +202,25 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
             )
 
             for item in response.get("results", []):
+                
                 url = item.get("url", "")
                 if not url.startswith("https://"):
                     continue
 
+                # Prefer official sources, while retaining other HTTPS evidence.
+                from urllib.parse import urlparse
+                hostname = urlparse(url).hostname or ""
+                is_official = (
+                    hostname == "gov.in"
+                    or hostname.endswith(".gov.in")
+                    or hostname == "ac.in"
+                    or hostname.endswith(".ac.in")
+                    or hostname.endswith(".gov"
+                    )
+                )
+
                 evidence.append({
+                    "is_official_source": is_official,
                     "title": str(item.get("title", "Untitled"))[:200],
                     "url": url,
                     "content": str(item.get("content", ""))[:1200],
