@@ -1,7 +1,10 @@
 import type {
   DecisionMatrix,
+  GraphGenerationRequest,
   Pathway,
+  PathwayGraph,
   StudentProfile,
+  StudentProfileSnapshot,
 } from "./types";
 
 
@@ -497,4 +500,211 @@ export async function simulateScenario(
 
 
   return data;
+}
+
+
+// ============================================================
+// STUDENT PROFILE SNAPSHOT CONVERSION
+// ============================================================
+
+const KNOWN_INTERESTS: Record<string, string> = {
+  ai: "technology_coding",
+  "computer science": "technology_coding",
+  coding: "technology_coding",
+  technology: "technology_coding",
+  tech: "technology_coding",
+  math: "mathematics_logic",
+  mathematics: "mathematics_logic",
+  logic: "mathematics_logic",
+  science: "science_discovery",
+  physics: "science_discovery",
+  chemistry: "science_discovery",
+  medicine: "biology_healthcare",
+  healthcare: "biology_healthcare",
+  biology: "biology_healthcare",
+  doctor: "biology_healthcare",
+  business: "business_finance",
+  finance: "business_finance",
+  economics: "business_finance",
+  commerce: "business_finance",
+  design: "creativity_design",
+  art: "creativity_design",
+  arts: "creativity_design",
+  humanities: "social_sciences_communication",
+  communication: "social_sciences_communication",
+  sustainability: "environment_sustainability",
+  environment: "environment_sustainability",
+  sports: "sports_physical_activities",
+};
+
+export function toStudentProfileSnapshot(
+  profile: StudentProfile
+): StudentProfileSnapshot {
+  const mappedInterests = new Set<string>();
+  for (const raw of profile.interests ?? []) {
+    const key = raw.toLowerCase().trim();
+    if (KNOWN_INTERESTS[key]) {
+      mappedInterests.add(KNOWN_INTERESTS[key]);
+    } else if (key) {
+      mappedInterests.add("exploring_new_ideas");
+    }
+  }
+  if (mappedInterests.size === 0) {
+    mappedInterests.add("still_exploring");
+  }
+
+  const rawSubjects = Array.isArray(profile.subjects) ? profile.subjects : [];
+  const uniqueSubjectNames = Array.from(
+    new Set(rawSubjects.map((s) => s.trim()).filter(Boolean))
+  );
+
+  const subjects = uniqueSubjectNames.map((name, idx) => ({
+    name,
+    marks:
+      typeof profile.marks === "number" && profile.marks > 0
+        ? profile.marks
+        : null,
+    maximum_marks: 100,
+    result_status: (typeof profile.marks === "number" && profile.marks > 0
+      ? "completed"
+      : "awaited") as "completed" | "awaited",
+    favourite: idx === 0,
+    challenging: false,
+  }));
+
+  const destination =
+    profile.locationPreference === "home"
+      ? "india"
+      : profile.locationPreference === "abroad"
+        ? "abroad"
+        : "both";
+
+  const rawCurrency = (profile.currency || "INR").toUpperCase().trim();
+  const currency = /^[A-Z]{3}$/.test(rawCurrency) ? rawCurrency : "INR";
+
+  const budgetAmount =
+    typeof profile.budgetAnnual === "number" && !isNaN(profile.budgetAnnual)
+      ? profile.budgetAnnual
+      : null;
+  const budgetStatus: "estimated" | "not_sure" =
+    budgetAmount !== null ? "estimated" : "not_sure";
+
+  return {
+    education_stage: "class10",
+    preferred_name: profile.name?.trim() || null,
+    country: profile.country?.trim() || "India",
+    region: null,
+    curriculum: "Other",
+    academic_status: "currently_studying",
+    preferred_language: null,
+    subjects,
+    overall_percentage:
+      typeof profile.marks === "number" &&
+      profile.marks >= 0 &&
+      profile.marks <= 100
+        ? profile.marks
+        : null,
+    overall_result_status:
+      typeof profile.marks === "number" && profile.marks > 0
+        ? "completed"
+        : "awaited",
+    interests: Array.from(mappedInterests),
+    strengths: [],
+    interest_description:
+      profile.interests && profile.interests.length > 0
+        ? `Interested in ${profile.interests.join(", ")}.`
+        : "Currently exploring available education and career paths.",
+    annual_budget: {
+      currency,
+      amount: budgetAmount,
+      budget_status: budgetStatus,
+    },
+    funding_preferences: {
+      interested_in_scholarships: !!profile.financialAid,
+      willing_to_consider_loans: false,
+    },
+    preferred_destination: destination,
+    priorities: [],
+    career_certainty:
+      profile.interests && profile.interests.length > 0
+        ? "few_ideas"
+        : "exploring",
+  };
+}
+
+
+// ============================================================
+// GENERATE PATHWAY GRAPH (Phase 4 API)
+// ============================================================
+
+export async function generatePathwayGraph(
+  request: GraphGenerationRequest
+): Promise<PathwayGraph> {
+  console.log("Sending graph generation request to backend:", request);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}/api/graph/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+  } catch (error) {
+    console.error("Cannot connect to backend:", error);
+    throw new Error(
+      "Cannot connect to the AI backend. Make sure FastAPI is running on http://localhost:8000."
+    );
+  }
+
+  let data: any;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      `Backend returned an invalid response (${response.status}).`
+    );
+  }
+
+  if (!response.ok) {
+    console.error("Graph generation API error:", data);
+    let message = "Pathway graph generation failed.";
+    if (typeof data?.detail === "string") {
+      message = data.detail;
+    } else if (Array.isArray(data?.detail)) {
+      message = data.detail
+        .map((err: any) => err.msg || JSON.stringify(err))
+        .join("; ");
+    }
+    throw new Error(message);
+  }
+
+  console.log("Pathway graph response received:", data);
+  return data as PathwayGraph;
+}
+
+
+// ============================================================
+// PROFILE PERSISTENCE HELPER
+// ============================================================
+
+export async function saveStudentProfile(
+  snapshot: StudentProfileSnapshot
+): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/api/profiles`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot),
+    });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.warn("Could not persist student profile to SQL database:", err);
+  }
+  return null;
 }
