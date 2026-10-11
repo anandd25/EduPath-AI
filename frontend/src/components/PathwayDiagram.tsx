@@ -21,6 +21,7 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import {
   ReactFlow,
@@ -200,14 +201,18 @@ export function PathwayCanvas({
 
   const [graphData, setGraphData] = useState<PathwayGraphData>(() => baseline.graph);
   const [routes, setRoutes] = useState<PathwayRoute[]>(() => baseline.routes);
-  const [loading, setLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationPhase, setGenerationPhase] = useState<string>('');
 
   const { fitView, zoomIn, zoomOut } = useReactFlow();
 
-  // Load complete pathways from backend
+  // Load complete pathways from backend with live telemetry
   const loadPathways = useCallback(async () => {
+    setIsGenerating(true);
+    setGenerationPhase('Groq AI analyzing Class 10 profile & interests...');
     try {
       const res = await apiService.getPathways(activeProfile, { candidateNodeCount: 12 });
+      setGenerationPhase('Validating feasibility, cutoffs & cash-flow...');
       if (res.graph && isValidRoadmapGraph(res.graph)) {
         const graph = res.graph as PathwayGraphData;
         setGraphData(graph);
@@ -223,6 +228,9 @@ export function PathwayCanvas({
       const fallback = clientPathwayService.generatePathways(activeProfile);
       setGraphData(fallback.graph);
       setRoutes(fallback.routes);
+    } finally {
+      setIsGenerating(false);
+      setGenerationPhase('');
     }
   }, [activeProfile]);
 
@@ -559,12 +567,26 @@ export function PathwayCanvas({
 
           {/* Groq AI Synthesize Trigger */}
           <button
+            disabled={isGenerating}
             onClick={() => setIsAIGeneratingModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-bold text-xs transition-all shadow-2xs ${
+              isGenerating
+                ? 'border-purple-400 bg-purple-100 text-purple-800 animate-pulse cursor-wait'
+                : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer'
+            }`}
             title="Synthesize personalized roadmap with Groq AI"
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-            <span className="hidden lg:inline">Groq AI Synthesize</span>
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
+                <span className="hidden lg:inline">Groq Generating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
+                <span className="hidden lg:inline">Groq AI Synthesize</span>
+              </>
+            )}
           </button>
 
           {/* Preference Learning Trigger */}
@@ -614,11 +636,26 @@ export function PathwayCanvas({
           </span>
         </div>
         <button
+          disabled={isGenerating}
           onClick={() => setIsAIGeneratingModalOpen(true)}
-          className="text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0 ml-2 cursor-pointer transition-colors"
+          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0 ml-2 transition-colors ${
+            isGenerating
+              ? 'bg-purple-100 text-purple-800 border border-purple-300 animate-pulse cursor-wait'
+              : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 cursor-pointer'
+          }`}
         >
-          <span>Regenerate with Groq</span>
-          <ChevronRight className="w-3 h-3" />
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-3 h-3 text-purple-600 animate-spin" />
+              <span>Generating with Groq...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3 h-3 text-purple-600" />
+              <span>Regenerate with Groq</span>
+              <ChevronRight className="w-3 h-3" />
+            </>
+          )}
         </button>
       </div>
 
@@ -667,34 +704,96 @@ export function PathwayCanvas({
                 </button>
               </div>
 
+              {/* Live Groq Generation Floating Indicator */}
+              {isGenerating && (
+                <div className="absolute top-4 sm:top-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 rounded-2xl border-2 border-purple-400 shadow-xl animate-in fade-in slide-in-from-top-3 duration-200">
+                  <div className="w-7 h-7 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-purple-600 animate-spin" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md">
+                        Groq AI Engine
+                      </span>
+                      <span className="text-xs font-bold text-[#1E3A4C]">Synthesizing Fresh Pathways...</span>
+                    </div>
+                    <p className="text-[11px] text-[#5E8085] mt-0.5 truncate">{generationPhase || 'Generating tailored milestones...'}</p>
+                  </div>
+                  <Loader2 className="w-4 h-4 text-purple-600 animate-spin ml-2 shrink-0" />
+                </div>
+              )}
+
               {/* Floating Instructions */}
               <div className="absolute bottom-4 left-4 z-10 hidden sm:block bg-white/95 backdrop-blur-xs px-3.5 py-2 rounded-xl border border-[#DCEBEA] shadow-xs text-[11px] text-[#5E8085]">
                 Click any milestone node to open complete decision details, requirements & cash flow.
               </div>
 
-              {/* React Flow Canvas */}
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                fitView
-                fitViewOptions={{ padding: 0.2 }}
-                minZoom={0.2}
-                maxZoom={1.8}
-                proOptions={{ hideAttribution: true }}
-              >
-                <Background color="#DCEBEA" gap={24} size={1} />
-                <Controls position="bottom-left" showInteractive={false} />
-                <MiniMap
-                  position="bottom-right"
-                  pannable
-                  zoomable
-                  nodeColor={(n) => String((n.data as CustomNodeData).accent)}
-                  maskColor="rgba(245,250,249,0.7)"
-                />
-              </ReactFlow>
+              {/* Canvas: Never left blank */}
+              {nodes.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#F5FAF9] text-center space-y-6">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-purple-500/20 via-[#367BA8]/20 to-[#278F89]/20 flex items-center justify-center animate-pulse border-2 border-purple-300">
+                      <Sparkles className="w-10 h-10 text-purple-600 animate-spin" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-md">
+                      AI
+                    </div>
+                  </div>
+                  <div className="space-y-2 max-w-md">
+                    <h3 className="text-xl font-bold text-[#1E3A4C]">
+                      Groq AI is Synthesizing Your Roadmap
+                    </h3>
+                    <p className="text-xs text-[#5E8085] leading-relaxed">
+                      Customizing Path A (Degree), Path B (Diploma), and Path C (Vocational) tailored to{' '}
+                      <span className="font-semibold text-[#367BA8]">{activeProfile.preferred_name || 'your'}</span> profile...
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+                    <div className="p-3.5 rounded-2xl bg-white border-2 border-purple-200 shadow-sm animate-pulse space-y-2">
+                      <div className="h-4 bg-purple-100 rounded w-2/3" />
+                      <div className="h-3 bg-purple-50 rounded w-full" />
+                      <div className="h-3 bg-purple-50 rounded w-4/5" />
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-white border-2 border-teal-200 shadow-sm animate-pulse delay-100 space-y-2">
+                      <div className="h-4 bg-teal-100 rounded w-2/3" />
+                      <div className="h-3 bg-teal-50 rounded w-full" />
+                      <div className="h-3 bg-teal-50 rounded w-4/5" />
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-white border-2 border-amber-200 shadow-sm animate-pulse delay-200 space-y-2">
+                      <div className="h-4 bg-amber-100 rounded w-2/3" />
+                      <div className="h-3 bg-amber-50 rounded w-full" />
+                      <div className="h-3 bg-amber-50 rounded w-4/5" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-purple-700 bg-purple-50 px-4 py-2 rounded-xl border border-purple-200">
+                    <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                    <span>{generationPhase || 'Synthesizing with Groq LPU engine...'}</span>
+                  </div>
+                </div>
+              ) : (
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  nodeTypes={nodeTypes}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  fitView
+                  fitViewOptions={{ padding: 0.2 }}
+                  minZoom={0.2}
+                  maxZoom={1.8}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background color="#DCEBEA" gap={24} size={1} />
+                  <Controls position="bottom-left" showInteractive={false} />
+                  <MiniMap
+                    position="bottom-right"
+                    pannable
+                    zoomable
+                    nodeColor={(n) => String((n.data as CustomNodeData).accent)}
+                    maskColor="rgba(245,250,249,0.7)"
+                  />
+                </ReactFlow>
+              )}
             </>
           ) : (
             /* Comparison Matrix View */
@@ -750,10 +849,9 @@ export function PathwayCanvas({
       {/* Groq AI Live Telemetry Modal */}
       <AIGenerationModal
         isOpen={isAIGeneratingModalOpen}
-        onClose={() => {
-          setIsAIGeneratingModalOpen(false);
-          loadPathways();
-        }}
+        onClose={() => setIsAIGeneratingModalOpen(false)}
+        isGenerating={isGenerating}
+        onTriggerGenerate={loadPathways}
         studentProfile={activeProfile}
         disciplineTitle={disciplineTitle}
       />

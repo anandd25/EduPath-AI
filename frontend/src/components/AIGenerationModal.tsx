@@ -16,6 +16,8 @@ interface AIGenerationModalProps {
   onClose: () => void;
   studentProfile: StudentProfileCreate | StudentProfileOut | null;
   disciplineTitle: string;
+  isGenerating?: boolean;
+  onTriggerGenerate?: () => void;
 }
 
 interface Step {
@@ -30,38 +32,45 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
   onClose,
   studentProfile,
   disciplineTitle,
+  isGenerating = false,
+  onTriggerGenerate,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [progress, setProgress] = useState(15);
+  const [progress, setProgress] = useState(20);
   const [completed, setCompleted] = useState(false);
 
   const name = studentProfile?.preferred_name || 'Student';
   const overallPct = studentProfile?.overall_percentage || 78;
   const interests = studentProfile?.interests || [];
 
+  // When modal opens, trigger generation and step through telemetry
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
-      setProgress(15);
+      setProgress(20);
       setCompleted(false);
       return;
     }
 
+    if (onTriggerGenerate) {
+      onTriggerGenerate();
+    }
+
     const timer1 = setTimeout(() => {
       setCurrentStep(2);
-      setProgress(45);
-    }, 800);
+      setProgress(50);
+    }, 600);
 
     const timer2 = setTimeout(() => {
       setCurrentStep(3);
-      setProgress(75);
-    }, 1700);
+      setProgress(80);
+    }, 1300);
 
     const timer3 = setTimeout(() => {
       setCurrentStep(4);
       setProgress(100);
       setCompleted(true);
-    }, 2500);
+    }, 2100);
 
     return () => {
       clearTimeout(timer1);
@@ -69,6 +78,15 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
       clearTimeout(timer3);
     };
   }, [isOpen]);
+
+  // If backend finishes before or after timer, ensure step 4 marks done
+  useEffect(() => {
+    if (isOpen && !isGenerating && currentStep >= 3) {
+      setCurrentStep(4);
+      setProgress(100);
+      setCompleted(true);
+    }
+  }, [isOpen, isGenerating, currentStep]);
 
   if (!isOpen) return null;
 
@@ -81,8 +99,8 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
     },
     {
       id: 2,
-      label: 'Groq AI Synthesizing Multi-Pathway Architectures',
-      detail: `Synthesizing tailored Route A, Route B, and Route C for ${disciplineTitle}...`,
+      label: 'Groq AI Synthesizing Multi-Pathway Options (llama-3.1-8b)',
+      detail: `Synthesizing tailored Degree, Diploma, and Vocational tracks for ${disciplineTitle}...`,
       status: currentStep > 2 ? 'done' : currentStep === 2 ? 'running' : 'pending',
     },
     {
@@ -103,24 +121,24 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-lg rounded-3xl bg-white border border-[#DCEBEA] shadow-2xl p-6 sm:p-8 space-y-6 overflow-hidden relative">
         {/* Decorative Top Gradient */}
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#278F89] via-[#367BA8] to-[#1E3A4C]" />
+        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#278F89] via-[#367BA8] to-purple-600" />
 
         {/* Modal Header */}
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#EAF4FF] to-[#CDEDE2] text-[#367BA8] flex items-center justify-center shadow-xs shrink-0">
-            <Brain className="w-6 h-6 text-[#278F89] animate-pulse" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#EAF4FF] to-purple-100 text-purple-600 flex items-center justify-center shadow-xs shrink-0">
+            <Brain className="w-6 h-6 text-purple-600 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#367BA8] bg-[#C9E6F8] px-2 py-0.5 rounded-md">
-                Groq AI Engine
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md">
+                Groq AI LPU Engine
               </span>
               <span className="text-[10px] font-semibold text-[#10B981] flex items-center gap-1">
-                <Zap className="w-3 h-3" /> Live Synthesis
+                <Zap className="w-3 h-3" /> Live Generation
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-[#1E3A4C] mt-0.5">
-              Generating Personalized Roadmap
+              {completed ? 'Roadmap Synthesized Successfully!' : 'Generating Personalized Roadmap'}
             </h2>
           </div>
         </div>
@@ -129,11 +147,11 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs font-semibold text-[#5E8085]">
             <span>Synthesis Telemetry</span>
-            <span className="text-[#367BA8] font-bold">{progress}%</span>
+            <span className="text-purple-700 font-bold">{progress}%</span>
           </div>
           <div className="w-full h-2.5 rounded-full bg-[#E2E8F0] overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#278F89] to-[#367BA8] transition-all duration-500 ease-out rounded-full"
+              className="h-full bg-gradient-to-r from-[#278F89] via-[#367BA8] to-purple-600 transition-all duration-300 ease-out rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -146,7 +164,7 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
               key={s.id}
               className={`p-3.5 rounded-2xl border transition-all ${
                 s.status === 'running'
-                  ? 'bg-[#F0FDF4] border-[#86EFAC] shadow-xs'
+                  ? 'bg-purple-50/60 border-purple-300 shadow-xs'
                   : s.status === 'done'
                   ? 'bg-white border-[#E2E8F0]'
                   : 'bg-[#F8FAFC] border-transparent opacity-60'
@@ -157,7 +175,7 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
                   {s.status === 'done' ? (
                     <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
                   ) : s.status === 'running' ? (
-                    <Loader2 className="w-4 h-4 text-[#278F89] animate-spin" />
+                    <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-[#CBD5E1]" />
                   )}
@@ -181,15 +199,15 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
           {completed ? (
             <button
               onClick={onClose}
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#278F89] to-[#367BA8] hover:opacity-95 shadow-md cursor-pointer transition-all animate-in zoom-in-95 duration-150"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#278F89] via-[#367BA8] to-purple-600 hover:opacity-95 shadow-md cursor-pointer transition-all animate-in zoom-in-95 duration-150"
             >
               <span>Explore My Personalized Pathways</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
-            <div className="text-center py-2 text-xs font-semibold text-[#5E8085] flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 text-[#367BA8] animate-spin" />
-              <span>Synthesizing tailored options for {name}...</span>
+            <div className="text-center py-2 text-xs font-semibold text-purple-700 flex items-center justify-center gap-2 bg-purple-50 rounded-xl p-3 border border-purple-200">
+              <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+              <span>Groq LPU is synthesizing tailored options for {name}...</span>
             </div>
           )}
         </div>
@@ -197,4 +215,3 @@ export const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
     </div>
   );
 };
-

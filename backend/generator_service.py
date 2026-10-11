@@ -223,36 +223,47 @@ def get_pathway_research(request: GraphGenerationRequest) -> str:
             )
 
     try:
+        import concurrent.futures
         from tavily import TavilyClient
 
         client = TavilyClient(api_key=api_key)
         evidence: list[dict[str, Any]] = []
 
-        for query in topics[:3]:
-            response = client.search(
-                query=query,
-                search_depth="basic",
-                max_results=3,
-                topic="general",
-            )
-
-            for item in response.get("results", []):
-                url = str(item.get("url", "")).strip()
-                if not url.startswith("https://"):
-                    continue
-
-                parsed_url = urlparse(url)
-                if not parsed_url.hostname:
-                    continue
-
-                evidence.append(
-                    {
-                        "is_official_source": _is_likely_official_source(url),
-                        "title": str(item.get("title") or "Untitled")[:300],
-                        "url": url[:2000],
-                        "content": str(item.get("content") or "")[:1200],
-                    }
+        def _fetch_query(query_str: str) -> list[dict[str, Any]]:
+            try:
+                res = client.search(
+                    query=query_str,
+                    search_depth="basic",
+                    max_results=3,
+                    topic="general",
                 )
+                return res.get("results", []) or []
+            except Exception:
+                return []
+
+        # Execute searches concurrently with strict 2.5 second timeout
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(_fetch_query, q) for q in topics[:3]]
+            done, _ = concurrent.futures.wait(futures, timeout=2.5)
+            for f in done:
+                try:
+                    for item in f.result():
+                        url = str(item.get("url", "")).strip()
+                        if not url.startswith("https://"):
+                            continue
+                        parsed_url = urlparse(url)
+                        if not parsed_url.hostname:
+                            continue
+                        evidence.append(
+                            {
+                                "is_official_source": _is_likely_official_source(url),
+                                "title": str(item.get("title") or "Untitled")[:300],
+                                "url": url[:2000],
+                                "content": str(item.get("content") or "")[:1200],
+                            }
+                        )
+                except Exception:
+                    pass
 
         unique: dict[str, dict[str, Any]] = {}
         for item in evidence:
@@ -573,7 +584,7 @@ def generate_pathway_graph(
 
     resolved_model = model or os.getenv(
         "GROQ_MODEL",
-        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
     )
 
     # Fetch research once so the prompt and evidence records use the same results.
@@ -589,6 +600,8 @@ def generate_pathway_graph(
             messages=messages,
             response_format={"type": "json_object"},
             temperature=0.2,
+            max_tokens=2048,
+            timeout=10.0,
         )
     except Exception as exc:
         raise LLMProviderError(f"Groq API call failed: {exc}") from exc
@@ -671,7 +684,7 @@ def generate_personalized_pathways_with_groq(
         logger.warning("Groq client initialization failed: %s", exc)
         return None
 
-    resolved_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    resolved_model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
     name = profile.get("preferred_name") or "Student"
     interests = profile.get("interests") or []
     interest_desc = profile.get("interest_description") or ""
@@ -725,7 +738,9 @@ def generate_personalized_pathways_with_groq(
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.3,
+            temperature=0.2,
+            max_tokens=2048,
+            timeout=10.0,
         )
         content = response.choices[0].message.content
         if not content:
