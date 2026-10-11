@@ -195,14 +195,14 @@ function EduPathApp() {
   // Initial loading state while Supabase checks stored session
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FAF9] text-[#376E7D]">
-        <div className="w-12 h-12 rounded-2xl bg-[#C9E6F8] text-[#367BA8] flex items-center justify-center shadow-2xs mb-3">
-          <Loader2 className="w-6 h-6 animate-spin text-[#367BA8]" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9F7F5] text-[#141413]">
+        <div className="w-12 h-12 rounded-2xl bg-[#FFF5F0] text-[#FF671B] flex items-center justify-center shadow-xs mb-3 border border-[#FFD9C7]">
+          <Loader2 className="w-6 h-6 animate-spin text-[#FF671B]" />
         </div>
-        <h2 className="font-serif-heading text-lg font-bold text-[#376E7D]">
+        <h2 className="text-xl font-bold text-[#141413]">
           EduPath
         </h2>
-        <p className="text-xs text-[#5E8085] mt-1">
+        <p className="text-xs text-[#8C827A] mt-1">
           Loading student session...
         </p>
       </div>
@@ -210,7 +210,7 @@ function EduPathApp() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5FAF9] text-[#376E7D] selection:bg-[#C9E6F8] selection:text-[#376E7D]">
+    <div className="min-h-screen flex flex-col bg-[#F9F7F5] text-[#141413] selection:bg-[#FFF5F0] selection:text-[#FF671B]">
       {/* Global Header */}
       <Header
         currentRoute={currentRoute}

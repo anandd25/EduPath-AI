@@ -511,31 +511,31 @@ export function PathwayCanvas({
 
   return (
     <div
-      className={`flex flex-col bg-[#F5FAF9] text-[#376E7D] ${
-        isEmbedded ? 'w-full h-[620px] rounded-3xl border border-[#DCEBEA] overflow-hidden relative shadow-2xs' : 'fixed inset-0 z-50'
+      className={`flex flex-col bg-[#F9F7F5] text-[#141413] ${
+        isEmbedded ? 'w-full h-[620px] rounded-3xl border border-[#EAE5E0] overflow-hidden relative shadow-xs' : 'fixed inset-0 z-50'
       }`}
     >
       {/* Top Workspace Header */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#DCEBEA] bg-white px-4 sm:px-6 z-20">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#EAE5E0] bg-white px-4 sm:px-6 z-20">
         <div className="flex items-center gap-3">
           {onBack && (
             <button
               onClick={onBack}
               aria-label="Back"
-              className="p-2 text-[#5E8085] hover:text-[#376E7D] hover:bg-[#F0F7F6] rounded-xl transition-colors cursor-pointer"
+              className="p-2 text-[#6E6762] hover:text-[#141413] hover:bg-[#F9F7F5] rounded-xl transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
 
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C9E6F8] text-[#367BA8] shadow-2xs">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF5F0] text-[#FF671B] border border-[#FFD9C7] shadow-xs">
             <GraduationCap className="w-5 h-5" />
           </div>
 
           <div>
-            <h1 className="text-sm sm:text-base font-bold text-[#376E7D]">EduPath Decision Engine</h1>
-            <p className="text-xs text-[#5E8085] hidden sm:block">
-              Evidence-Backed Multi-Pathway Planning & Simulation
+            <h1 className="text-sm sm:text-base font-bold text-[#141413]">EduPath Decision Engine</h1>
+            <p className="text-xs text-[#6E6762] hidden sm:block">
+              Evidence-Backed Multi-Pathway Planning &amp; Simulation
             </p>
           </div>
         </div>
@@ -543,11 +543,11 @@ export function PathwayCanvas({
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           {/* Mode Switcher */}
-          <div className="flex items-center bg-[#F5FAF9] p-1 rounded-xl border border-[#DCEBEA] text-xs font-semibold">
+          <div className="flex items-center bg-[#F9F7F5] p-1 rounded-xl border border-[#EAE5E0] text-xs font-semibold">
             <button
               onClick={() => setViewMode('diagram')}
               className={`px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'diagram' ? 'bg-white shadow-2xs text-[#367BA8] font-bold' : 'text-[#5E8085]'
+                viewMode === 'diagram' ? 'bg-white shadow-2xs text-[#FF671B] font-bold' : 'text-[#6E6762]'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -557,7 +557,7 @@ export function PathwayCanvas({
             <button
               onClick={() => setViewMode('matrix')}
               className={`px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'matrix' ? 'bg-white shadow-2xs text-[#367BA8] font-bold' : 'text-[#5E8085]'
+                viewMode === 'matrix' ? 'bg-white shadow-2xs text-[#FF671B] font-bold' : 'text-[#6E6762]'
               }`}
             >
               <Scale className="w-3.5 h-3.5" />
@@ -616,23 +616,23 @@ export function PathwayCanvas({
       </header>
 
       {/* Profile Context Banner */}
-      <div className="bg-gradient-to-r from-[#F0F7F6] via-[#EDF8F5] to-[#E9F4F8] border-b border-[#DCEBEA] px-4 py-2 flex items-center justify-between text-xs text-[#376E7D] shrink-0">
+      <div className="bg-[#FAF8F5] border-b border-[#EAE5E0] px-4 py-2 flex items-center justify-between text-xs text-[#141413] shrink-0">
         <div className="flex items-center gap-2 overflow-x-auto min-w-0">
-          <span className="inline-flex items-center gap-1.5 font-bold text-[#1E3A4C] bg-white px-2.5 py-1 rounded-md border border-[#DCEBEA] shadow-2xs shrink-0">
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            AI Tailored for: <span className="text-[#367BA8]">{activeProfile.preferred_name || 'Student'}</span>
+          <span className="inline-flex items-center gap-1.5 font-bold text-[#141413] bg-white px-2.5 py-1 rounded-full border border-[#EAE5E0] shadow-2xs shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-[#FF671B]" />
+            AI Tailored for: <span className="text-[#FF671B]">{activeProfile.preferred_name || 'Student'}</span>
           </span>
-          <span className="hidden sm:inline-block text-[#5E8085]">·</span>
-          <span className="text-[#5E8085] truncate font-medium">
-            Focus: <strong className="text-[#1E3A4C]">{disciplineTitle}</strong>
+          <span className="hidden sm:inline-block text-[#8C827A]">·</span>
+          <span className="text-[#6E6762] truncate font-medium">
+            Focus: <strong className="text-[#141413]">{disciplineTitle}</strong>
           </span>
-          <span className="hidden sm:inline-block text-[#5E8085]">·</span>
-          <span className="text-[#5E8085] shrink-0">
-            Class 10: <strong className="text-[#278F89]">{activeProfile.overall_percentage || 80}%</strong>
+          <span className="hidden sm:inline-block text-[#8C827A]">·</span>
+          <span className="text-[#6E6762] shrink-0">
+            Class 10: <strong className="text-[#0D9488]">{activeProfile.overall_percentage || 80}%</strong>
           </span>
-          <span className="hidden md:inline-block text-[#5E8085]">·</span>
-          <span className="text-[#5E8085] shrink-0 hidden md:inline">
-            Budget: <strong className="text-[#1E3A4C]">₹{activeProfile.annual_budget?.amount?.toLocaleString('en-IN') || '1,50,000'}/yr</strong>
+          <span className="hidden md:inline-block text-[#8C827A]">·</span>
+          <span className="text-[#6E6762] shrink-0 hidden md:inline">
+            Budget: <strong className="text-[#141413]">₹{activeProfile.annual_budget?.amount?.toLocaleString('en-IN') || '1,50,000'}/yr</strong>
           </span>
         </div>
         <button

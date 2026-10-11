@@ -143,24 +143,24 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
   const pathway = PREVIEW_DATA[activeTab];
 
   return (
-    <div className="w-full rounded-3xl bg-white border border-[#DCEBEA] shadow-md overflow-hidden flex flex-col transition-all">
+    <div className="w-full rounded-3xl bg-white border border-[#EAE5E0] shadow-sm overflow-hidden flex flex-col transition-all">
       {/* Top Banner / Tab Bar */}
-      <div className="bg-[#F8FAFC] border-b border-[#DCEBEA] p-3 sm:p-4">
+      <div className="bg-[#FAF8F5] border-b border-[#EAE5E0] p-3 sm:p-4">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#376E7D]">
-              Class 10 Decision Engine · Live Preview
+            <span className="flex h-2 w-2 rounded-full bg-[#FF671B] animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#141413]">
+              3 Pathways Beyond Class 10
             </span>
           </div>
 
           <button
             type="button"
             onClick={onCompareClick}
-            className="text-[11px] font-bold text-[#367BA8] hover:text-[#278F89] flex items-center gap-1 transition-colors cursor-pointer"
+            className="text-[11px] font-bold text-[#FF671B] hover:text-[#e5560f] flex items-center gap-1 transition-colors cursor-pointer"
           >
             <Scale className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Compare All 3</span>
+            <span>Compare Matrix</span>
           </button>
         </div>
 
@@ -171,12 +171,12 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
             onClick={() => setActiveTab('path_b')}
             className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
               activeTab === 'path_b'
-                ? 'bg-white text-[#278F89] border-[#278F89] shadow-xs'
-                : 'bg-white/60 text-[#5E8085] border-transparent hover:bg-white'
+                ? 'bg-white text-[#141413] border-[#FF671B] shadow-xs'
+                : 'bg-white/60 text-[#6E6762] border-transparent hover:bg-white'
             }`}
           >
-            <span className="block text-[10px] uppercase font-semibold text-[#278F89]">Route B</span>
-            <span className="truncate block font-bold text-xs text-[#376E7D]">Polytechnic</span>
+            <span className="block text-[10px] uppercase font-semibold text-[#0D9488]">Route B</span>
+            <span className="truncate block font-bold text-xs text-[#141413]">Polytechnic</span>
           </button>
 
           <button
@@ -184,12 +184,12 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
             onClick={() => setActiveTab('path_a')}
             className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
               activeTab === 'path_a'
-                ? 'bg-white text-[#367BA8] border-[#367BA8] shadow-xs'
-                : 'bg-white/60 text-[#5E8085] border-transparent hover:bg-white'
+                ? 'bg-white text-[#141413] border-[#FF671B] shadow-xs'
+                : 'bg-white/60 text-[#6E6762] border-transparent hover:bg-white'
             }`}
           >
-            <span className="block text-[10px] uppercase font-semibold text-[#367BA8]">Route A</span>
-            <span className="truncate block font-bold text-xs text-[#376E7D]">Degree (JEE)</span>
+            <span className="block text-[10px] uppercase font-semibold text-[#2563EB]">Route A</span>
+            <span className="truncate block font-bold text-xs text-[#141413]">Degree (JEE)</span>
           </button>
 
           <button
@@ -197,12 +197,12 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
             onClick={() => setActiveTab('path_c')}
             className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
               activeTab === 'path_c'
-                ? 'bg-white text-[#D97706] border-[#D97706] shadow-xs'
-                : 'bg-white/60 text-[#5E8085] border-transparent hover:bg-white'
+                ? 'bg-white text-[#141413] border-[#FF671B] shadow-xs'
+                : 'bg-white/60 text-[#6E6762] border-transparent hover:bg-white'
             }`}
           >
             <span className="block text-[10px] uppercase font-semibold text-[#D97706]">Route C</span>
-            <span className="truncate block font-bold text-xs text-[#376E7D]">Vocational</span>
+            <span className="truncate block font-bold text-xs text-[#141413]">Vocational</span>
           </button>
         </div>
       </div>
@@ -212,10 +212,10 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
         {/* Pathway Header Info */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm sm:text-base font-bold text-[#376E7D]">
+            <h3 className="text-sm sm:text-base font-bold text-[#141413]">
               {pathway.name}
             </h3>
-            <p className="text-xs text-[#5E8085]">
+            <p className="text-xs text-[#6E6762]">
               {pathway.category}
             </p>
           </div>
@@ -230,7 +230,7 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
           {pathway.steps.map((step, idx) => (
             <div
               key={step.title}
-              className="relative flex items-start gap-3 p-3 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] hover:border-[#CBD5E1] transition-colors"
+              className="relative flex items-start gap-3 p-3 rounded-2xl bg-[#F9F7F5] border border-[#EAE5E0] hover:border-[#D5CFC9] transition-colors"
             >
               <div
                 className="w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-2xs mt-0.5"
@@ -241,14 +241,14 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-bold text-[#376E7D] truncate">
+                  <h4 className="text-xs font-bold text-[#141413] truncate">
                     {step.title}
                   </h4>
-                  <span className="text-[10px] font-semibold text-[#5E8085] bg-white px-2 py-0.5 rounded-md border border-[#E2E8F0] shrink-0">
+                  <span className="text-[10px] font-semibold text-[#6E6762] bg-white px-2 py-0.5 rounded-md border border-[#EAE5E0] shrink-0">
                     {step.tag}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#5E8085] leading-relaxed mt-0.5">
+                <p className="text-[11px] text-[#6E6762] leading-relaxed mt-0.5">
                   {step.sub}
                 </p>
               </div>
@@ -258,25 +258,25 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
 
         {/* Quick Comparative Metrics Pills */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="p-2.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0]">
-            <span className="text-[10px] font-medium text-[#64748B] block">Estimated Cost:</span>
-            <span className="font-bold text-[#1E293B] text-xs sm:text-sm">{pathway.annualFee}</span>
+          <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#EAE5E0]">
+            <span className="text-[10px] font-medium text-[#8C827A] block">Estimated Cost:</span>
+            <span className="font-bold text-[#141413] text-xs sm:text-sm">{pathway.annualFee}</span>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0]">
-            <span className="text-[10px] font-medium text-[#64748B] block">Total Duration:</span>
-            <span className="font-bold text-[#1E293B] text-xs sm:text-sm">{pathway.duration}</span>
+          <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#EAE5E0]">
+            <span className="text-[10px] font-medium text-[#8C827A] block">Total Duration:</span>
+            <span className="font-bold text-[#141413] text-xs sm:text-sm">{pathway.duration}</span>
           </div>
         </div>
 
         {/* Verified Advantage & Fallback Note */}
-        <div className="text-[11px] space-y-1.5 p-3 rounded-xl bg-[#F0FDF4] border border-[#DCFCE7] text-[#166534]">
+        <div className="text-[11px] space-y-1.5 p-3 rounded-xl bg-[#FFF9F5] border border-[#FFECD9] text-[#9A3412]">
           <div className="flex items-start gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#FF671B] shrink-0 mt-0.5" />
             <span className="leading-snug">{pathway.highlight}</span>
           </div>
-          <div className="flex items-start gap-1.5 text-[#15803D]">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-1.5 text-[#7C2D12]">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#FF671B] shrink-0 mt-0.5" />
             <span className="leading-snug font-medium">{pathway.fallbackSummary}</span>
           </div>
         </div>
@@ -286,7 +286,7 @@ export const HeroPathwayPreview: React.FC<HeroPathwayPreviewProps> = ({
           <button
             type="button"
             onClick={onExploreClick}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#278F89] to-[#367BA8] hover:opacity-95 active:scale-98 shadow-sm transition-all cursor-pointer group"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full text-xs sm:text-sm font-bold text-white bg-[#FF671B] hover:bg-[#e5560f] active:scale-98 shadow-sm transition-all cursor-pointer group"
           >
             <Layers className="w-4 h-4" />
             <span>Open Decision Engine &amp; Simulator</span>
