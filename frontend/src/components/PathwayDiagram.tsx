@@ -259,53 +259,198 @@ export function PathwayCanvas({
 
     const filteredNodeIds = new Set(filteredNodes.map((n) => n.node_id));
 
-    // Calculate layout positions by level / pathway
+    // 1. Build incoming edge count to locate root nodes
+    const incomingEdgeCount = new Map<string, number>();
+    for (const n of cleanNodes) {
+      incomingEdgeCount.set(n.node_id, 0);
+    }
+    for (const e of graphData.edges || []) {
+      if (incomingEdgeCount.has(e.target_node_id)) {
+        incomingEdgeCount.set(e.target_node_id, (incomingEdgeCount.get(e.target_node_id) || 0) + 1);
+      }
+    }
+
+    // 2. Identify root node (Class 10 gateway)
+    const rootNodes = cleanNodes.filter(
+      (n) =>
+        n.pathway_id === 'root' ||
+        n.node_id.includes('root') ||
+        n.node_id.includes('class10') ||
+        (incomingEdgeCount.get(n.node_id) || 0) === 0
+    );
+    const rootNodeId = rootNodes[0]?.node_id || cleanNodes[0]?.node_id;
+    const nodeMap = new Map(cleanNodes.map((n) => [n.node_id, n]));
+
+    // 3. Build intra-pathway or from-root edges for safe vertical depth (ignoring cross-pathway fallback edges)
+    const intraOutgoingEdges = new Map<string, string[]>();
+    for (const n of cleanNodes) {
+      intraOutgoingEdges.set(n.node_id, []);
+    }
+    for (const e of graphData.edges || []) {
+      const srcNode = nodeMap.get(e.source_node_id);
+      const tgtNode = nodeMap.get(e.target_node_id);
+      const isFromRoot = e.source_node_id === rootNodeId || (srcNode && srcNode.pathway_id === 'root');
+      const isSamePathway = srcNode && tgtNode && srcNode.pathway_id === tgtNode.pathway_id;
+
+      if (isFromRoot || isSamePathway) {
+        if (intraOutgoingEdges.has(e.source_node_id)) {
+          intraOutgoingEdges.get(e.source_node_id)!.push(e.target_node_id);
+        }
+      }
+    }
+
+    // 4. Build a map of route sequence positions: routeId -> Map<nodeId, sequenceIndex>
+    const routeNodeSequence = new Map<string, number>();
+    if (graphData.pathway_routes && Array.isArray(graphData.pathway_routes)) {
+      for (const r of graphData.pathway_routes) {
+        if (Array.isArray(r.node_ids)) {
+          const hasRoot = r.node_ids.includes(rootNodeId);
+          r.node_ids.forEach((id, idx) => {
+            if (id === rootNodeId) return;
+            const stageIndex = hasRoot ? idx : idx + 1;
+            if (!routeNodeSequence.has(id)) {
+              routeNodeSequence.set(id, stageIndex);
+            }
+          });
+        }
+      }
+    }
+
+    // 5. Calculate cycle-safe topological depth using BFS from root
+    const nodeDepth = new Map<string, number>();
+    if (rootNodeId) {
+      nodeDepth.set(rootNodeId, 0);
+      const queue: string[] = [rootNodeId];
+      const visited = new Set<string>([rootNodeId]);
+      while (queue.length > 0) {
+        const curr = queue.shift()!;
+        const currDepth = nodeDepth.get(curr) || 0;
+        const children = intraOutgoingEdges.get(curr) || [];
+        for (const child of children) {
+          if (!visited.has(child)) {
+            visited.add(child);
+            nodeDepth.set(child, currDepth + 1);
+            queue.push(child);
+          }
+        }
+      }
+    }
+
+    // 5. Column Mapping
+    const isFiltered = filterPathwayId !== 'all';
     const pathCols: Record<string, number> = {
-      root: 1,
       path_a_entrance: 0,
       path_b_diploma: 1,
       path_c_vocational: 2,
     };
 
-    const flowNodes: Node<CustomNodeData>[] = filteredNodes.map((n) => {
-      const pId = n.pathway_id || 'root';
-      const col = pathCols[pId] ?? 1;
+    let nextCol = 3;
+    cleanNodes.forEach((n) => {
+      const pId = n.pathway_id || '';
+      if (pId && pId !== 'root' && pathCols[pId] === undefined) {
+        const lower = pId.toLowerCase();
+        if (lower.includes('a') || lower.includes('entrance') || lower.includes('degree')) pathCols[pId] = 0;
+        else if (lower.includes('b') || lower.includes('diploma')) pathCols[pId] = 1;
+        else if (lower.includes('c') || lower.includes('vocational') || lower.includes('trade')) pathCols[pId] = 2;
+        else {
+          pathCols[pId] = nextCol++;
+        }
+      }
+    });
 
-      // Group rows strictly by sequence
-      let row = 0;
-      if (pId === 'root' || n.node_id === 'root_class10') {
-        row = 0;
-      } else if (n.node_id === 'node_a1_prep' || n.node_id === 'node_b1_diploma' || n.node_id === 'node_c1_vocational') {
-        row = 1;
-      } else if (n.node_id === 'node_a2_entrance' || n.node_id === 'node_c2_apprenticeship') {
-        row = 2;
-      } else if (n.node_id === 'node_a3_degree' || n.node_id === 'node_b2_lateral') {
-        row = 3;
-      } else if (n.node_id === 'node_a4_career' || n.node_id === 'node_b3_career' || n.node_id === 'node_c3_career') {
-        row = 4;
+    // Spacious layout constants: 270px width + 90px gap = 360px col, 200px height + 80px gap = 280px row
+    const COL_WIDTH = 360;
+    const ROW_HEIGHT = 280;
+    const LEFT_MARGIN = 40;
+    const TOP_MARGIN = 40;
+
+    const totalCols = isFiltered ? 1 : Math.max(3, nextCol);
+    const rootX = isFiltered ? LEFT_MARGIN : LEFT_MARGIN + ((totalCols - 1) * COL_WIDTH) / 2;
+    const rootY = TOP_MARGIN;
+
+    // Track assigned rows per column to eliminate stacking
+    const colUsedRows = new Map<number, Set<number>>();
+    for (let c = 0; c <= totalCols + 2; c++) {
+      colUsedRows.set(c, new Set<number>());
+    }
+
+    // Sort nodes deterministically: Root first, then by pathway column and chronological depth
+    const sortedFilteredNodes = [...filteredNodes].sort((a, b) => {
+      const aIsRoot = a.pathway_id === 'root' || a.node_id === rootNodeId;
+      const bIsRoot = b.pathway_id === 'root' || b.node_id === rootNodeId;
+      if (aIsRoot && !bIsRoot) return -1;
+      if (!aIsRoot && bIsRoot) return 1;
+
+      const colA = isFiltered ? 0 : (pathCols[a.pathway_id || ''] ?? 1);
+      const colB = isFiltered ? 0 : (pathCols[b.pathway_id || ''] ?? 1);
+      if (colA !== colB) return colA - colB;
+
+      const seqA = routeNodeSequence.get(a.node_id) ?? (nodeDepth.get(a.node_id) ?? 99);
+      const seqB = routeNodeSequence.get(b.node_id) ?? (nodeDepth.get(b.node_id) ?? 99);
+      if (seqA !== seqB) return seqA - seqB;
+
+      return a.node_id.localeCompare(b.node_id);
+    });
+
+    const flowNodes: Node<CustomNodeData>[] = [];
+    const occupiedCoordinates = new Set<string>();
+
+    for (const n of sortedFilteredNodes) {
+      const isRoot = n.pathway_id === 'root' || n.node_id === rootNodeId;
+      const pId = n.pathway_id || 'root';
+
+      let posX: number;
+      let posY: number;
+
+      if (isRoot) {
+        posX = rootX;
+        posY = rootY;
       } else {
-        if (n.node_type === 'exploration') row = 0;
-        else if (n.title.toLowerCase().includes('class 11') || n.title.toLowerCase().includes('3-year') || n.title.toLowerCase().includes('iti')) row = 1;
-        else if (n.title.toLowerCase().includes('entrance') || n.title.toLowerCase().includes('apprentice')) row = 2;
-        else if (n.title.toLowerCase().includes('degree') || n.title.toLowerCase().includes('b.tech') || n.title.toLowerCase().includes('lateral')) row = 3;
-        else row = 4;
+        const col = isFiltered ? 0 : (pathCols[pId] ?? 1);
+
+        // Calculate sequence-based row
+        let targetRow = routeNodeSequence.get(n.node_id) ?? nodeDepth.get(n.node_id) ?? 1;
+        if (targetRow <= 0) targetRow = 1;
+
+        // Collision avoidance: if this row in this column is already used, increment row
+        const usedRows = colUsedRows.get(col) || new Set<number>();
+        while (usedRows.has(targetRow)) {
+          targetRow += 1;
+        }
+        usedRows.add(targetRow);
+        colUsedRows.set(col, usedRows);
+
+        posX = LEFT_MARGIN + col * COL_WIDTH;
+        posY = TOP_MARGIN + targetRow * ROW_HEIGHT;
       }
 
-      const accent =
-        pId === 'path_a_entrance' ? '#367BA8' : pId === 'path_b_diploma' ? '#278F89' : pId === 'path_c_vocational' ? '#D97706' : '#376E7D';
+      // Safety check: ensure no two nodes share the same exact coordinate
+      while (occupiedCoordinates.has(`${posX},${posY}`)) {
+        posY += ROW_HEIGHT;
+      }
+      occupiedCoordinates.add(`${posX},${posY}`);
 
-      return {
+      const accent =
+        pId === 'path_a_entrance' || pId.includes('a')
+          ? '#367BA8'
+          : pId === 'path_b_diploma' || pId.includes('b')
+          ? '#278F89'
+          : pId === 'path_c_vocational' || pId.includes('c')
+          ? '#D97706'
+          : '#376E7D';
+
+      flowNodes.push({
         id: n.node_id,
         type: 'decision',
-        position: { x: col * 350 + 50, y: row * 220 + 30 },
+        position: { x: posX, y: posY },
         data: {
           node: n,
           selected: selectedNode?.node_id === n.node_id,
           onSelect: (clickedNode) => setSelectedNode(clickedNode),
           accent,
         },
-      };
-    });
+      });
+    }
 
     const flowEdges: Edge[] = (graphData.edges || [])
       .filter((e) => filteredNodeIds.has(e.source_node_id) && filteredNodeIds.has(e.target_node_id))
@@ -330,10 +475,14 @@ export function PathwayCanvas({
   useEffect(() => {
     setNodes(flowGraph.nodes);
     setEdges(flowGraph.edges);
-    setTimeout(() => {
+  }, [flowGraph, setNodes, setEdges]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
       fitView({ padding: 0.2, duration: 250 });
     }, 100);
-  }, [flowGraph, fitView, setNodes, setEdges]);
+    return () => clearTimeout(timer);
+  }, [graphData, filterPathwayId, fitView]);
 
   // Handle Preference Learning Result
   const handlePreferencesUpdated = (result: PreferenceComparisonResponse) => {
