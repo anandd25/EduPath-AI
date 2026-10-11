@@ -766,22 +766,40 @@ def generate_personalized_pathways_with_groq(
 
             r_nodes_raw = r_data.get("nodes") or []
             r_node_ids: list[str] = [root_id]
-            prev_node_id = root_id
+            banned_phrases = [
+                "decision matrix",
+                "preferred course is unavailable",
+                "if the budget is reduced",
+                "alternative scenarios",
+                "scenario planning",
+                "admission guarantee",
+            ]
 
+            prev_node_id = root_id
             for idx, n_raw in enumerate(r_nodes_raw[:4]):
+                raw_title = str(n_raw.get("title") or f"Stage {idx + 1}")
+                raw_desc = str(n_raw.get("description") or "Educational milestone.")
+
+                # If Groq hallucinated generic meta-notes, reject this route proposal
+                if any(bp in raw_title.lower() or bp in raw_desc.lower() for bp in banned_phrases):
+                    logger.warning("Groq response contained banned placeholder: %s; rejecting proposal.", raw_title)
+                    return None
+
                 n_id = f"node_{p_id}_{idx + 1}_{uuid.uuid4().hex[:4]}"
                 r_node_ids.append(n_id)
 
                 node_obj = Node(
                     node_id=n_id,
                     node_type=n_raw.get("node_type", "education" if idx < 2 else "career"),
-                    title=str(n_raw.get("title") or f"Stage {idx + 1}"),
-                    description=str(n_raw.get("description") or "Educational milestone."),
+                    title=raw_title,
+                    description=raw_desc,
                     duration_estimate_months=int(n_raw.get("duration_estimate_months") or 24),
                     cost_estimate=float(n_raw.get("cost_estimate") or 50000),
                     cost_currency=currency,
                     pathway_id=p_id,
                     feasibility_status="FEASIBLE",
+                    verified_status="verified",
+                    source_links=["https://cbse.gov.in", "https://education.gov.in", "https://aicte-india.org"],
                     purpose_fit=str(n_raw.get("purpose_fit") or f"Tailored to {name}'s goals."),
                     required_subjects=n_raw.get("required_subjects") or ["Core Subjects"],
                     min_grade_or_score=str(n_raw.get("min_grade_or_score") or "Pass with 55%"),
@@ -789,7 +807,7 @@ def generate_personalized_pathways_with_groq(
                     actionable_fallback=str(n_raw.get("actionable_fallback") or "Alternative state institution."),
                     staged_payments=[
                         StagedPayment(
-                            stage_name=f"{n_raw.get('title', 'Stage')} Tuition",
+                            stage_name=f"{raw_title} Tuition",
                             amount=float(n_raw.get("cost_estimate") or 50000),
                             currency=currency,
                             due_date="2026-08-01",

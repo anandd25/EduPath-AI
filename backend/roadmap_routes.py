@@ -92,6 +92,33 @@ def _generate_multi_pathway_roadmap(profile: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _sanitize_graph_nodes(graph: PathwayGraph) -> PathwayGraph | None:
+    """Validate and filter out any deprecated meta-placeholder nodes."""
+    banned_phrases = [
+        "decision matrix",
+        "preferred course is unavailable",
+        "if the budget is reduced",
+        "alternative scenarios",
+        "scenario planning",
+        "admission guarantee",
+    ]
+    clean_nodes = [
+        n for n in graph.nodes
+        if not any(bp in n.title.lower() or bp in n.description.lower() for bp in banned_phrases)
+    ]
+    if len(clean_nodes) < 3:
+        return None
+
+    clean_ids = {n.node_id for n in clean_nodes}
+    clean_edges = [
+        e for e in graph.edges
+        if e.source_node_id in clean_ids and e.target_node_id in clean_ids
+    ]
+    graph.nodes = clean_nodes
+    graph.edges = clean_edges
+    return graph
+
+
 def _generate(payload: RoadmapRequest) -> dict[str, Any]:
     profile = payload.student_profile_snapshot
 
@@ -108,11 +135,13 @@ def _generate(payload: RoadmapRequest) -> dict[str, Any]:
             }
             request = GraphGenerationRequest.model_validate(request_data)
             graph = generate_pathway_graph(request)
-            return {
-                "graph": graph.model_dump(mode="json"),
-                "source": "ai_expansion",
-                "notice": "Expanded roadmap with source-backed candidates.",
-            }
+            sanitized = _sanitize_graph_nodes(graph)
+            if sanitized is not None:
+                return {
+                    "graph": sanitized.model_dump(mode="json"),
+                    "source": "ai_expansion",
+                    "notice": "Expanded roadmap with source-backed candidates.",
+                }
         except Exception as exc:
             logger.warning("Graph expansion failed, generating complete multi-pathway: %s", exc)
 

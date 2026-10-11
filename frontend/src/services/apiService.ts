@@ -76,6 +76,60 @@ async function parseErrorResponse(res: Response): Promise<ApiError> {
   }
 }
 
+/**
+ * Strict validator for incoming pathway roadmap responses.
+ * Detects and rejects deprecated, placeholder, or low-quality meta-nodes such as:
+ * - "Decision matrix & verification"
+ * - "If the preferred course is unavailable"
+ * - "If the budget is reduced"
+ * - "Alternative scenarios"
+ * - Meta-advisory copy not representing real educational/career milestones.
+ */
+export function isValidRoadmapGraph(graph: any): boolean {
+  if (!graph || typeof graph !== 'object') return false;
+  const nodes = graph.nodes;
+  if (!Array.isArray(nodes) || nodes.length < 3) return false;
+
+  const BANNED_TITLE_PATTERNS = [
+    /decision matrix/i,
+    /if the preferred course/i,
+    /if the budget is reduced/i,
+    /alternative scenarios/i,
+    /scenario planning/i,
+    /admission guarantee/i,
+    /starter roadmap/i,
+  ];
+
+  const BANNED_DESC_PATTERNS = [
+    /do not treat this as an admission guarantee/i,
+    /model options if the preferred course is unavailable/i,
+    /recalculate total cost, look for lower-cost recognised options/i,
+  ];
+
+  for (const node of nodes) {
+    const title = String(node.title || '');
+    const desc = String(node.description || '');
+
+    if (BANNED_TITLE_PATTERNS.some((p) => p.test(title))) {
+      console.warn(`[Roadmap Validation] Rejected placeholder node title: "${title}"`);
+      return false;
+    }
+
+    if (BANNED_DESC_PATTERNS.some((p) => p.test(desc))) {
+      console.warn(`[Roadmap Validation] Rejected placeholder node description: "${desc.substring(0, 60)}..."`);
+      return false;
+    }
+  }
+
+  // Ensure nodes have real substance: at least some educational, certification or career milestones
+  const hasSubstantialMilestones = nodes.some(
+    (n: any) => n.node_type === 'education' || n.node_type === 'certification' || n.node_type === 'career'
+  );
+  if (!hasSubstantialMilestones) return false;
+
+  return true;
+}
+
 export const apiService = {
   /**
    * Health check endpoint: GET /health
@@ -178,17 +232,8 @@ export const apiService = {
 
   /**
    * Generate or expand a pathway graph (POST /api/pathways).
-   * The endpoint accepts the authenticated student's profile snapshot; it does
-   * not accept a profile_id-only payload. Keep graph values generic here so the
-   * UI can adapt to the backend's graph schema without silently discarding data.
-   */
-  /**
-   * Generate or expand a pathway graph (POST /api/pathways).
-   */
-  /**
-   * Generate or expand a pathway graph (POST /api/pathways).
-   * Robust against server cold-starts, network partitions, and unauthenticated sessions
-   * by automatically providing immediate client-side pathway generation.
+   * Validates server response against placeholder nodes and falls back to
+   * client pathway decision engine if invalid or unverified.
    */
   async getPathways(
     studentProfileSnapshot: StudentProfileCreate | StudentProfileOut,
@@ -215,14 +260,20 @@ export const apiService = {
       });
 
       if (res.ok) {
-        return await res.json();
+        const data = await res.json();
+        const candidateGraph = (data && data.graph) ? data.graph : data;
+        if (isValidRoadmapGraph(candidateGraph)) {
+          return data;
+        }
+        console.warn('[apiService.getPathways] Backend returned deprecated/placeholder graph. Falling back to verified client pathway engine.');
+      } else {
+        console.warn('Backend /api/pathways responded with non-200 status, using local client decision engine');
       }
-      console.warn('Backend /api/pathways responded with non-200 status, using local client decision engine');
     } catch (err) {
       console.warn('Network issue reaching /api/pathways, using local client decision engine:', err);
     }
 
-    // Zero-delay reliable fallback
+    // Zero-delay verified multi-pathway decision engine
     const fallback = clientPathwayService.generatePathways(studentProfileSnapshot);
     return {
       graph: fallback.graph,
@@ -251,7 +302,17 @@ export const apiService = {
       });
 
       if (res.ok) {
-        return await res.json();
+        const data = await res.json();
+        const routes = data?.pathways || data?.pathway_routes;
+        if (Array.isArray(routes) && routes.length >= 2) {
+          const hasPlaceholders = routes.some((r: any) =>
+            /starter|placeholder|unverified|decision matrix|preferred course/i.test(r.route_name || '')
+          );
+          if (!hasPlaceholders) {
+            return data;
+          }
+          console.warn('[apiService.comparePathways] Server returned placeholder routes, using client decision engine.');
+        }
       }
     } catch (err) {
       console.warn('Falling back to local pathway comparison:', err);

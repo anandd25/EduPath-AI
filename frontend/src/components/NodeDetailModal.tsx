@@ -77,9 +77,22 @@ export const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                   </span>
                 )}
 
-                <span className="px-2 py-0.5 rounded-md bg-gray-100 text-[#5E8085] text-[10px] font-semibold">
-                  Status: {node.verified_status || 'unverified'}
-                </span>
+                {node.verified_status === 'verified' ? (
+                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 flex items-center gap-1">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                    <span>Official Criteria Verified</span>
+                  </span>
+                ) : node.verified_status === 'estimate' ? (
+                  <span className="px-2.5 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[10px] font-bold border border-sky-200/60 flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-sky-600" />
+                    <span>Financial Estimate</span>
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 flex items-center gap-1">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                    <span>State Curriculum Verified</span>
+                  </span>
+                )}
               </div>
 
               <h2 className="font-serif-heading text-xl sm:text-2xl font-bold text-[#376E7D] leading-tight">

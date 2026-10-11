@@ -41,7 +41,7 @@ import '@xyflow/react/dist/style.css';
 
 import { DecisionNode, PathwayGraphData, PathwayRoute, PreferenceComparisonResponse, ScenarioSimulationResponse } from '../types/pathway';
 import { StudentProfileCreate, StudentProfileOut } from '../types/studentProfile';
-import { apiService } from '../services/apiService';
+import { apiService, isValidRoadmapGraph } from '../services/apiService';
 import { clientPathwayService } from '../services/clientPathwayService';
 import { NodeDetailModal } from './NodeDetailModal';
 import { PathwayComparisonMatrix } from './PathwayComparisonMatrix';
@@ -208,10 +208,15 @@ export function PathwayCanvas({
   const loadPathways = useCallback(async () => {
     try {
       const res = await apiService.getPathways(activeProfile, { candidateNodeCount: 12 });
-      if (res.graph) {
+      if (res.graph && isValidRoadmapGraph(res.graph)) {
         const graph = res.graph as PathwayGraphData;
         setGraphData(graph);
         setRoutes(graph.pathway_routes || (res.pathway_routes as PathwayRoute[]) || []);
+      } else {
+        console.warn('Backend graph response invalid or contained placeholder copy; using verified client decision engine.');
+        const fallback = clientPathwayService.generatePathways(activeProfile);
+        setGraphData(fallback.graph);
+        setRoutes(fallback.routes);
       }
     } catch (err) {
       console.warn('Using client pathway decision engine:', err);
@@ -231,10 +236,24 @@ export function PathwayCanvas({
       return { nodes: [], edges: [] };
     }
 
+    const BANNED_PATTERNS = [
+      /decision matrix/i,
+      /if the preferred course/i,
+      /if the budget is reduced/i,
+      /alternative scenarios/i,
+      /scenario planning/i,
+      /admission guarantee/i,
+    ];
+
+    // Guarantee that no deprecated placeholder nodes ever enter the render tree
+    const cleanNodes = graphData.nodes.filter(
+      (n) => !BANNED_PATTERNS.some((p) => p.test(n.title || '') || p.test(n.description || ''))
+    );
+
     const filteredNodes =
       filterPathwayId === 'all'
-        ? graphData.nodes
-        : graphData.nodes.filter(
+        ? cleanNodes
+        : cleanNodes.filter(
             (n) => !n.pathway_id || n.pathway_id === filterPathwayId || n.pathway_id === 'root'
           );
 
