@@ -756,7 +756,30 @@ def generate_personalized_pathways_with_groq(
         edges: list[Edge] = []
         routes: list[PathwayRoute] = []
 
+        from pathway_comparison import _build_cost_evidence_and_benchmark, _build_categorized_institutes
+
         root_id = "root_class10"
+        root_desc, root_cit, root_bench = _build_cost_evidence_and_benchmark(
+            country=profile.get("country", "India"),
+            region=profile.get("region", "State"),
+            stage_key="secondary",
+            discipline_title=data.get("discipline_title", "Career Foundations"),
+            currency=currency,
+            cost_estimate=2000,
+            tuition=1000,
+            living=500,
+            fees=500,
+        )
+        root_inst = _build_categorized_institutes(
+            country=profile.get("country", "India"),
+            region=profile.get("region", "State"),
+            stage_key="secondary",
+            discipline_title=data.get("discipline_title", "Career Foundations"),
+            currency=currency,
+            budget=budget,
+            overall_pct=overall_pct,
+        )
+
         root_node = Node(
             node_id=root_id,
             node_type="exploration",
@@ -770,6 +793,10 @@ def generate_personalized_pathways_with_groq(
             feasibility_status="FEASIBLE",
             required_subjects=["Mathematics", "Science", "English"],
             actionable_fallback="State supplementary examination or open schooling.",
+            cost_evidence_description=root_desc,
+            cost_source_citation=root_cit,
+            real_life_benchmark=root_bench,
+            categorized_institutes=root_inst,
         )
         nodes.append(root_node)
 
@@ -803,13 +830,35 @@ def generate_personalized_pathways_with_groq(
                 n_id = f"node_{p_id}_{idx + 1}_{uuid.uuid4().hex[:4]}"
                 r_node_ids.append(n_id)
 
+                node_cost_est = float(n_raw.get("cost_estimate") or 50000)
+                n_desc, n_cit, n_bench = _build_cost_evidence_and_benchmark(
+                    country=profile.get("country", "India"),
+                    region=profile.get("region", "State"),
+                    stage_key=p_id,
+                    discipline_title=data.get("discipline_title", "Technical & Professional Studies"),
+                    currency=currency,
+                    cost_estimate=node_cost_est,
+                    tuition=node_cost_est * 0.7,
+                    living=node_cost_est * 0.2,
+                    fees=node_cost_est * 0.1,
+                )
+                n_inst = _build_categorized_institutes(
+                    country=profile.get("country", "India"),
+                    region=profile.get("region", "State"),
+                    stage_key=p_id,
+                    discipline_title=data.get("discipline_title", "Technical & Professional Studies"),
+                    currency=currency,
+                    budget=budget,
+                    overall_pct=overall_pct,
+                )
+
                 node_obj = Node(
                     node_id=n_id,
                     node_type=n_raw.get("node_type", "education" if idx < 2 else "career"),
                     title=raw_title,
                     description=raw_desc,
                     duration_estimate_months=int(n_raw.get("duration_estimate_months") or 24),
-                    cost_estimate=float(n_raw.get("cost_estimate") or 50000),
+                    cost_estimate=node_cost_est,
                     cost_currency=currency,
                     pathway_id=p_id,
                     feasibility_status="FEASIBLE",
@@ -823,11 +872,15 @@ def generate_personalized_pathways_with_groq(
                     staged_payments=[
                         StagedPayment(
                             stage_name=f"{raw_title} Tuition",
-                            amount=float(n_raw.get("cost_estimate") or 50000),
+                            amount=node_cost_est,
                             currency=currency,
                             due_date="2026-08-01",
                         )
                     ],
+                    cost_evidence_description=n_desc,
+                    cost_source_citation=n_cit,
+                    real_life_benchmark=n_bench,
+                    categorized_institutes=n_inst,
                 )
                 nodes.append(node_obj)
 

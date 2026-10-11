@@ -62,6 +62,40 @@ export interface DecisionNode {
   actionable_fallback?: string | null;
   pathway_id?: string | null;
   feasibility_status?: 'FEASIBLE' | 'CONDITIONAL' | 'BLOCKED';
+
+  // 6. Cost Evidence, Real-Life Benchmark & Categorized Institutes
+  cost_evidence_description?: string | null;
+  cost_source_citation?: string | null;
+  real_life_benchmark?: RealLifeBenchmark | null;
+  categorized_institutes?: CategorizedInstitutes | null;
+}
+
+export interface RealLifeBenchmark {
+  institution_name: string;
+  program_name?: string | null;
+  actual_tuition?: number | null;
+  actual_living?: number | null;
+  actual_fees?: number | null;
+  actual_total?: number | null;
+  currency: string;
+  source_citation: string;
+  academic_year?: string | null;
+  variance_note?: string | null;
+}
+
+export interface InstituteItem {
+  name: string;
+  location: string;
+  fit_reason: string;
+  estimated_annual_cost?: number | null;
+  admission_cutoff?: string | null;
+  badge?: string | null;
+}
+
+export interface CategorizedInstitutes {
+  location_based: InstituteItem[];
+  merit_based: InstituteItem[];
+  best_suited: InstituteItem[];
 }
 
 export interface PathwayEdge {

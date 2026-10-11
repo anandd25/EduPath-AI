@@ -144,6 +144,34 @@ class StagedPayment(StrictModel):
     covered_by: Literal["budget", "scholarship", "loan", "unfunded"] = "budget"
 
 
+class RealLifeBenchmark(StrictModel):
+    institution_name: str = Field(min_length=1, max_length=300)
+    program_name: str | None = Field(default=None, max_length=200)
+    actual_tuition: FiniteFloat | None = Field(default=None, ge=0)
+    actual_living: FiniteFloat | None = Field(default=None, ge=0)
+    actual_fees: FiniteFloat | None = Field(default=None, ge=0)
+    actual_total: FiniteFloat | None = Field(default=None, ge=0)
+    currency: str = Field(default="INR", pattern=r"^[A-Z]{3}$")
+    source_citation: str = Field(min_length=1, max_length=500)
+    academic_year: str | None = Field(default=None, max_length=50)
+    variance_note: str | None = Field(default=None, max_length=1000)
+
+
+class InstituteItem(StrictModel):
+    name: str = Field(min_length=1, max_length=300)
+    location: str = Field(min_length=1, max_length=200)
+    fit_reason: str = Field(min_length=1, max_length=1000)
+    estimated_annual_cost: FiniteFloat | None = Field(default=None, ge=0)
+    admission_cutoff: str | None = Field(default=None, max_length=200)
+    badge: str | None = Field(default=None, max_length=100)
+
+
+class CategorizedInstitutes(StrictModel):
+    location_based: list[InstituteItem] = Field(default_factory=list, max_length=10)
+    merit_based: list[InstituteItem] = Field(default_factory=list, max_length=10)
+    best_suited: list[InstituteItem] = Field(default_factory=list, max_length=10)
+
+
 class Node(StrictModel):
     node_id: ReferenceId
     node_type: NodeType
@@ -197,6 +225,12 @@ class Node(StrictModel):
     actionable_fallback: str | None = Field(default=None, max_length=2000)
     pathway_id: str | None = Field(default=None, max_length=128)
     feasibility_status: Literal["FEASIBLE", "CONDITIONAL", "BLOCKED"] = "FEASIBLE"
+
+    # 6. Cost Evidence, Real-Life Benchmark & Categorized Institutes
+    cost_evidence_description: str | None = Field(default=None, max_length=3000)
+    cost_source_citation: str | None = Field(default=None, max_length=500)
+    real_life_benchmark: RealLifeBenchmark | None = None
+    categorized_institutes: CategorizedInstitutes | None = None
 
     @field_validator("node_type", mode="before")
     @classmethod

@@ -112,6 +112,18 @@ class TestEduPathFeatures(unittest.TestCase):
             self.assertIsNotNone(node.verified_status)
             self.assertIsNotNone(node.actionable_fallback)
 
+            # Dimension 6: Cost Evidence, Real-Life Benchmark & Categorized Institutes
+            if node.cost_estimate and node.cost_estimate > 0:
+                self.assertIsNotNone(node.cost_evidence_description)
+                self.assertIsNotNone(node.cost_source_citation)
+                self.assertIsNotNone(node.real_life_benchmark)
+                self.assertIsNotNone(node.real_life_benchmark.institution_name)
+                self.assertIsNotNone(node.real_life_benchmark.source_citation)
+                self.assertIsNotNone(node.categorized_institutes)
+                self.assertGreaterEqual(len(node.categorized_institutes.location_based), 1)
+                self.assertGreaterEqual(len(node.categorized_institutes.merit_based), 1)
+                self.assertGreaterEqual(len(node.categorized_institutes.best_suited), 1)
+
     def test_02_country_adaptation(self):
         """Verify multi-pathway generation adapts properly to different country contexts."""
         graph_uk, routes_uk = build_complete_pathways(self.profile_uk, currency="GBP")
